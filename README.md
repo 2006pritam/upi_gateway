@@ -17,6 +17,34 @@ Payments go **directly to each merchant's own UPI account** — this app never h
 
 ---
 
+## 📸 Screenshots
+
+**Homepage**
+![Home](screenshots/1-home.png)
+
+**Features**
+![Features](screenshots/2-features.png)
+
+**API Docs**
+![Docs](screenshots/3-docs.png)
+
+**Admin Dashboard**
+![Dashboard](screenshots/4-dashboard.png)
+
+**Add Payment Account**
+![Add Payment Account](screenshots/5-add-payment-account.png)
+
+**Payment Page**
+![Payment Page](screenshots/6-payment-page.png)
+
+**Verifying Payment**
+![Verifying Payment](screenshots/7-verifying-payment.png)
+
+**Payment Success**
+![Payment Success](screenshots/8-payment-success.png)
+
+---
+
 ## ✨ Features
 
 - 🔄 **Multi-merchant** — each merchant manages their own UPI accounts
