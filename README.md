@@ -343,6 +343,20 @@ MIT © [Mayank Singh](https://github.com/mynkdev-21/)
 
 ---
 
+## 📬 Contact
+
+Kisi bhi query, collaboration ya support ke liye reach out karo:
+
+| Platform | Link |
+|---|---|
+| 📧 Email | [mayanksingh3132@gmail.com](mailto:mayanksingh3132@gmail.com) |
+| 🌐 Portfolio | [mayankdeveloper.site](https://mayankdeveloper.site) |
+| 🏢 Company | [amtechinfo.online](https://amtechinfo.online) |
+| ✈️ Telegram | [@mayankdeveloper](https://t.me/mayankdeveloper) |
+| 🐙 GitHub | [@mynkdev-21](https://github.com/mynkdev-21/) |
+
+---
+
 <div align="center">
 Built with ❤️ for Indian merchants by <a href="https://github.com/mynkdev-21/">Mayank Singh</a>
 </div>
