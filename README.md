@@ -345,7 +345,7 @@ MIT © [Mayank Singh](https://github.com/mynkdev-21/)
 
 ## 📬 Contact
 
-Kisi bhi query, collaboration ya support ke liye reach out karo:
+Have a question, collaboration idea, or need support? Feel free to reach out:
 
 | Platform | Link |
 |---|---|
