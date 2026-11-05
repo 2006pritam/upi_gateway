@@ -639,6 +639,44 @@ See the `LICENSE` file for details.
 
 ---
 
+## 📬 Contact & Connect
+
+Have a question, collaboration idea, business inquiry, or technical discussion? Feel free to get in touch.
+
+<p align="center">
+  <a href="mailto:mayanksingh3132@gmail.com">
+    <img src="https://img.shields.io/badge/Email-Contact_Me-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Email"/>
+  </a>
+  <a href="https://linkedin.com/in/mynk-dev">
+    <img src="https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/>
+  </a>
+  <a href="https://t.me/mayankdeveloper">
+    <img src="https://img.shields.io/badge/Telegram-Message-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"/>
+  </a>
+  <a href="https://github.com/mynkdev-21">
+    <img src="https://img.shields.io/badge/GitHub-Follow-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
+  </a>
+</p>
+
+### 🌐 Professional Links
+
+| Platform | Details |
+|---|---|
+| 📧 Email | mayanksingh3132@gmail.com |
+| 🌐 Portfolio | [mayankdeveloper.site](https://mayankdeveloper.site) |
+| 💼 LinkedIn | [linkedin.com/in/mynk-dev](https://linkedin.com/in/mynk-dev) |
+| 🏢 Company | [amtechinfo.online](https://amtechinfo.online) |
+| ✈️ Telegram | [@mayankdeveloper](https://t.me/mayankdeveloper) |
+| 🐙 GitHub | [@mynkdev-21](https://github.com/mynkdev-21) |
+
+---
+
+<p align="center">
+  <b>Have an idea? Let's build something great together.</b>
+  <br/>
+  <sub>Mayank Singh · Full Stack Developer · Founder @ AmTech INFO</sub>
+</p>
+---
 ## 👨‍💻 Author
 
 **Mayank Singh**
