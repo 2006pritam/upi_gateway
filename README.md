@@ -23,46 +23,24 @@
 
 ---
 
+## 🚀 What's Coming Next?
+
 <div align="center">
 
-  <h2>🚀 Something Exciting Is Coming</h2>
+### Something Big Is In The Works!
 
-  <p>
-    We're working hard to make <strong>Veyora</strong> better.
-    <br/>
-    New features, improvements and powerful capabilities are on the way.
-  </p>
+After our current project, we're planning to build something new for the developer ecosystem.
 
-  <br/>
+**A Developer-Friendly UPI Payment Gateway.**
 
-  <img src="https://img.shields.io/badge/Status-Coming%20Soon-orange?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Development-Active-success?style=for-the-badge" />
+A new project focused on seamless payment integration, simple APIs, reliable payment processing and a developer-first experience.
 
-  <br/><br/>
+<img src="https://img.shields.io/badge/Next%20Project-UPI%20Gateway-orange?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Status-Coming%20Soon-blue?style=for-the-badge" />
 
-  <h3>✨ What's Coming Next?</h3>
+**More details and updates coming soon.**
 
-  <p>
-    ⚡ Powerful Video Processing<br/>
-    🌐 Advanced Content Delivery<br/>
-    🖥️ Infrastructure Management<br/>
-    🔌 Developer API Improvements<br/>
-    🎯 More Features & Enhancements
-  </p>
-
-  <br/>
-
-  <h3>Stay Tuned!</h3>
-
-  <p>
-    We're building something worth waiting for.
-    <br/>
-    <strong>Follow the repository to stay updated.</strong>
-  </p>
-
-  <br/>
-
-  <sub>More updates coming soon. Thanks for being here! ❤️</sub>
+Stay tuned. 👀
 
 </div>
 
