@@ -27,23 +27,33 @@
 
 <div align="center">
 
-### Something Big Is In The Works!
+### We're Working on Something Better!
 
-After our current project, we're planning to build something new for the developer ecosystem.
+The initial version of our UPI Gateway is already available on GitHub.
 
-**A Developer-Friendly UPI Payment Gateway.**
+Now we're preparing the next phase of development — bringing improvements, new capabilities, better reliability and a more polished developer experience.
 
-A new project focused on seamless payment integration, simple APIs, reliable payment processing and a developer-first experience.
+**What's ahead?**
 
-<img src="https://img.shields.io/badge/Next%20Project-UPI%20Gateway-orange?style=for-the-badge" />
-<img src="https://img.shields.io/badge/Status-Coming%20Soon-blue?style=for-the-badge" />
+- ⚡ Enhanced Payment Processing
+- 🔐 Improved Security & Validation
+- 🔌 Better API Integration
+- 📊 Improved Dashboard & Analytics
+- 🛠️ Performance Optimizations
+- 📚 Better Documentation
 
-**More details and updates coming soon.**
+<br/>
 
-Stay tuned. 👀
+<img src="https://img.shields.io/badge/Development-Active-success?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Next%20Update-Coming%20Soon-orange?style=for-the-badge" />
+
+### Stay Tuned!
+
+We're building on the existing foundation, one improvement at a time.
+
+**The next update is coming soon.**
 
 </div>
-
 ## 📖 Overview
 
 UPI Gateway is a self-hosted, multi-merchant payment management platform designed for businesses that want to integrate UPI payments into their applications.
