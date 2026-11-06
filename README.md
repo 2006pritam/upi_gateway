@@ -23,6 +23,49 @@
 
 ---
 
+<div align="center">
+
+  <h2>🚀 Something Exciting Is Coming</h2>
+
+  <p>
+    We're working hard to make <strong>Veyora</strong> better.
+    <br/>
+    New features, improvements and powerful capabilities are on the way.
+  </p>
+
+  <br/>
+
+  <img src="https://img.shields.io/badge/Status-Coming%20Soon-orange?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Development-Active-success?style=for-the-badge" />
+
+  <br/><br/>
+
+  <h3>✨ What's Coming Next?</h3>
+
+  <p>
+    ⚡ Powerful Video Processing<br/>
+    🌐 Advanced Content Delivery<br/>
+    🖥️ Infrastructure Management<br/>
+    🔌 Developer API Improvements<br/>
+    🎯 More Features & Enhancements
+  </p>
+
+  <br/>
+
+  <h3>Stay Tuned!</h3>
+
+  <p>
+    We're building something worth waiting for.
+    <br/>
+    <strong>Follow the repository to stay updated.</strong>
+  </p>
+
+  <br/>
+
+  <sub>More updates coming soon. Thanks for being here! ❤️</sub>
+
+</div>
+
 ## 📖 Overview
 
 UPI Gateway is a self-hosted, multi-merchant payment management platform designed for businesses that want to integrate UPI payments into their applications.
