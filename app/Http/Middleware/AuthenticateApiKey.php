@@ -5,30 +5,80 @@ namespace App\Http\Middleware;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Merchant API auth: headers `X-Api-Key` and `X-Api-Secret`.
+ * Merchant API authentication via X-Api-Key / X-Api-Secret headers.
+ *
+ * Enforces:
+ *  - Per-API-key rate limit  : config('gateway.api_key_rate_limit') / min
+ *  - Per-IP rate limit       : config('gateway.api_ip_rate_limit') / min
+ *  - X-Request-Id on every response
+ *  - last_used_at / last_used_ip at most once per minute
  */
 class AuthenticateApiKey
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $key = (string) $request->header('X-Api-Key');
+        $requestId = (string) Str::uuid();
+        $request->headers->set('X-Request-Id', $requestId);
+
+        $key    = (string) $request->header('X-Api-Key');
         $secret = (string) $request->header('X-Api-Secret');
 
         $merchant = $key !== '' ? User::where('api_key', $key)->first() : null;
 
         if (! $merchant || ! $merchant->api_secret || ! hash_equals($merchant->api_secret, $secret)) {
-            return response()->json(['message' => 'Invalid API key or secret.'], 401);
+            return response()->json(['message' => 'Invalid API key or secret.'], 401)
+                ->header('X-Request-Id', $requestId);
         }
 
         if (! $merchant->is_active) {
-            return response()->json(['message' => 'Merchant account is disabled.'], 403);
+            return response()->json(['message' => 'Merchant account is disabled.'], 403)
+                ->header('X-Request-Id', $requestId);
         }
 
         $request->setUserResolver(fn () => $merchant);
 
-        return $next($request);
+        // ── Per-key throttle ──────────────────────────────────────────────────
+        $keyLimit  = (int) config('gateway.api_key_rate_limit', 120);
+        $keyBucket = 'api-key:'.$merchant->id;
+
+        if (RateLimiter::tooManyAttempts($keyBucket, $keyLimit)) {
+            return response()->json(['message' => 'Rate limit exceeded for this API key.'], 429)
+                ->header('Retry-After', (string) RateLimiter::availableIn($keyBucket))
+                ->header('X-RateLimit-Limit', (string) $keyLimit)
+                ->header('X-RateLimit-Remaining', '0')
+                ->header('X-Request-Id', $requestId);
+        }
+        RateLimiter::hit($keyBucket, 60);
+
+        // ── Per-IP throttle ───────────────────────────────────────────────────
+        $ipLimit  = (int) config('gateway.api_ip_rate_limit', 600);
+        $ipBucket = 'api-ip:'.$request->ip();
+
+        if (RateLimiter::tooManyAttempts($ipBucket, $ipLimit)) {
+            return response()->json(['message' => 'Rate limit exceeded for this IP.'], 429)
+                ->header('Retry-After', (string) RateLimiter::availableIn($ipBucket))
+                ->header('X-Request-Id', $requestId);
+        }
+        RateLimiter::hit($ipBucket, 60);
+
+        // ── Track last_used_at / last_used_ip (at most once per minute) ────────
+        $trackKey = 'api_track:'.$merchant->id;
+        if (! app('cache')->has($trackKey)) {
+            app('cache')->put($trackKey, 1, 60);
+            DB::table('users')->where('id', $merchant->id)->update([
+                'api_last_used_at' => now(),
+                'api_last_used_ip' => $request->ip(),
+            ]);
+        }
+
+        $response = $next($request);
+
+        return $response->header('X-Request-Id', $requestId);
     }
 }

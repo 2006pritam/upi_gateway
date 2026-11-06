@@ -6,21 +6,16 @@
     $amount = number_format($order->amount, 2);
     $totalSeconds = max(1, $order->created_at->diffInSeconds($order->expires_at));
     $apps = [
-        ['GPay', 'tez://upi/pay', 'text-[#1a73e8]'],
-        ['PhonePe', 'phonepe://pay', 'text-[#5f259f]'],
-        ['Paytm', 'paytmmp://pay', 'text-[#00baf2]'],
-        ['BHIM', 'upi://pay', 'text-[#f47920]'],
+        ['GPay',    'tez://upi/pay',   'text-[#1a73e8]', 'images/upi/gpay.png'],
+        ['PhonePe', 'phonepe://pay',   'text-[#5f259f]', 'images/upi/phonepe.png'],
+        ['Paytm',   'paytmmp://pay',   'text-[#00baf2]', 'images/upi/paytm.png'],
+        ['BHIM',    'upi://pay',       'text-[#f47920]', 'images/upi/bhim.png'],
     ];
 @endphp
 
 @push('head')
 <meta name="robots" content="noindex">
-<style>
-    @keyframes pop { 0% { transform: scale(.4); opacity: 0 } 70% { transform: scale(1.08) } 100% { transform: scale(1); opacity: 1 } }
-    @keyframes draw { to { stroke-dashoffset: 0 } }
-    .pop { animation: pop .5s cubic-bezier(.2,.9,.3,1.2) both }
-    .draw { stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw .45s .3s ease-out forwards }
-</style>
+<link rel="stylesheet" href="{{ asset('css/pay.css') }}">
 @endpush
 
 @section('body')
@@ -30,7 +25,7 @@
 
             {{-- Summary --}}
             <div class="md:col-span-2 relative bg-slate-950 text-white p-6 sm:p-8 flex flex-col overflow-hidden">
-                <div class="absolute inset-0 opacity-50" style="background: radial-gradient(400px circle at 0% 0%, rgb(79 70 229 / .6), transparent 60%);"></div>
+                <div class="absolute inset-0 opacity-50" class="hero-gradient"></div>
                 <div class="relative flex items-center gap-3">
                     <x-avatar :name="$merchant" size="w-11 h-11 text-base" class="!bg-white/10 !text-white ring-1 ring-white/20" />
                     <div class="min-w-0">
@@ -60,7 +55,7 @@
                         <div class="relative w-14 h-14">
                             <svg viewBox="0 0 36 36" class="w-14 h-14 -rotate-90">
                                 <circle cx="18" cy="18" r="16" fill="none" stroke="rgb(255 255 255 / .12)" stroke-width="3" />
-                                <circle id="ring" cx="18" cy="18" r="16" fill="none" stroke="#818cf8" stroke-width="3" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear" />
+                                <circle id="ring" cx="18" cy="18" r="16" fill="none" stroke="#818cf8" stroke-width="3" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="0" class="ring-transition" />
                             </svg>
                             <div id="timer" class="absolute inset-0 grid place-items-center font-mono text-xs font-medium">--:--</div>
                         </div>
@@ -136,8 +131,10 @@
                             <button class="btn btn-primary btn-lg w-full"><x-icon name="lock" class="w-5 h-5" /> Pay ₹{{ $amount }} with {{ $pgName }}</button>
                         </form>
                         <div class="mt-4 flex flex-wrap justify-center gap-2">
-                            @foreach ($apps as [$name, $scheme, $color])
-                                <span class="rounded-full bg-slate-50 ring-1 ring-slate-200 px-3 py-1 text-xs font-bold {{ $color }}">{{ $name }}</span>
+                            @foreach ($apps as [$name, $scheme, $color, $logo])
+                                <span class="rounded-full bg-slate-50 ring-1 ring-slate-200 px-3 py-1 text-xs font-bold {{ $color }} flex items-center gap-1.5">
+                                    <img src="{{ asset($logo) }}" class="w-4 h-4 rounded-sm" alt="{{ $name }}">{{ $name }}
+                                </span>
                             @endforeach
                             <span class="rounded-full bg-slate-50 ring-1 ring-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Cards</span>
                             <span class="rounded-full bg-slate-50 ring-1 ring-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Netbanking</span>
@@ -145,6 +142,16 @@
                         @if ($order->provider_checkout)
                             <p class="mt-6 text-xs text-slate-500">Already paid? Stay on this page — we're checking with {{ $pgName }} automatically.</p>
                         @endif
+                        <div class="mt-6 flex items-center justify-center gap-3">
+                            <div class="relative w-10 h-10">
+                                <svg viewBox="0 0 36 36" class="w-10 h-10 -rotate-90">
+                                    <circle cx="18" cy="18" r="16" fill="none" stroke="rgb(0 0 0 / .08)" stroke-width="3" />
+                                    <circle id="ring" cx="18" cy="18" r="16" fill="none" stroke="#818cf8" stroke-width="3" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="0" class="ring-transition" />
+                                </svg>
+                                <div id="timer" class="absolute inset-0 grid place-items-center font-mono text-[10px] font-medium text-slate-700">--:--</div>
+                            </div>
+                            <div class="text-sm text-slate-500">Complete payment before time runs out</div>
+                        </div>
                     </div>
                     <div class="mt-auto">
                         <div class="flex items-center justify-center gap-2.5 rounded-xl bg-slate-50 ring-1 ring-slate-200 px-4 py-3 text-sm text-slate-600">
@@ -167,8 +174,10 @@
                     </div>
 
                     <div class="mt-5 flex flex-wrap justify-center gap-2">
-                        @foreach ($apps as [$name, $scheme, $color])
-                            <span class="rounded-full bg-slate-50 ring-1 ring-slate-200 px-3 py-1 text-xs font-bold {{ $color }}">{{ $name }}</span>
+                        @foreach ($apps as [$name, $scheme, $color, $logo])
+                            <span class="rounded-full bg-slate-50 ring-1 ring-slate-200 px-3 py-1 text-xs font-bold {{ $color }} flex items-center gap-1.5">
+                                <img src="{{ asset($logo) }}" class="w-4 h-4 rounded-sm" alt="{{ $name }}">{{ $name }}
+                            </span>
                         @endforeach
                     </div>
 
@@ -177,8 +186,10 @@
                         <div class="flex items-center gap-3 text-xs text-slate-400"><span class="h-px flex-1 bg-slate-200"></span>OR PAY ON THIS PHONE<span class="h-px flex-1 bg-slate-200"></span></div>
                         <a href="{{ $order->upiIntentUrl() }}" class="btn btn-primary btn-lg w-full"><x-icon name="phone" class="w-5 h-5" /> Pay ₹{{ $amount }} with UPI app</a>
                         <div class="grid grid-cols-3 gap-2">
-                            @foreach (array_slice($apps, 0, 3) as [$name, $scheme, $color])
-                                <a href="{{ $order->upiIntentUrl($scheme) }}" class="btn btn-secondary font-bold {{ $color }}">{{ $name }}</a>
+                            @foreach (array_slice($apps, 0, 3) as [$name, $scheme, $color, $logo])
+                                <a href="{{ $order->upiIntentUrl($scheme) }}" class="btn btn-secondary font-bold {{ $color }} flex items-center justify-center gap-1.5">
+                                    <img src="{{ asset($logo) }}" class="w-5 h-5 rounded-sm" alt="{{ $name }}">{{ $name }}
+                                </a>
                             @endforeach
                         </div>
                     </div>
@@ -216,7 +227,7 @@
 
 @if (in_array($order->status, ['pending', 'review']))
 @push('scripts')
-<script>
+<script nonce="{{ $csp_nonce }}">
 (() => {
     const initialStatus = @json($order->status);
     const expiresAt = {{ $order->expires_at->getTimestampMs() }};

@@ -79,7 +79,7 @@
                                 <span class="inline-flex items-center gap-1.5 text-xs font-medium {{ $log->success ? 'text-emerald-700' : 'text-red-700' }}">
                                     <span class="w-1.5 h-1.5 rounded-full {{ $log->success ? 'bg-emerald-500' : 'bg-red-500' }}"></span>{{ $log->response_code ?? 'No response' }}
                                 </span>
-                                <div class="text-xs text-slate-400 truncate max-w-xs">{{ Str::limit($log->response_body, 60) }}</div>
+                                @if($log->error_label)<div class="text-xs text-slate-400 font-mono">{{ $log->error_label }}</div>@endif
                             </td>
                             <td class="td text-slate-500 whitespace-nowrap">{{ $log->created_at->format('d M, h:i:s A') }}</td>
                         </tr>

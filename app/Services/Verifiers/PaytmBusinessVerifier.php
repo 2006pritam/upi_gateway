@@ -17,7 +17,6 @@ class PaytmBusinessVerifier implements Verifier
     public function check(Order $order): VerificationResult
     {
         $mid = $order->paymentAccount->credential('mid');
-
         if (! $mid) {
             return VerificationResult::pending(['error' => 'Paytm MID not configured']);
         }
@@ -28,7 +27,11 @@ class PaytmBusinessVerifier implements Verifier
             ]);
             $data = $response->json() ?? [];
         } catch (Throwable $e) {
-            Log::warning('Paytm status check failed', ['order' => $order->order_no, 'error' => $e->getMessage()]);
+            Log::warning('Paytm status check failed', [
+                'order_id' => $order->order_no,
+                'error'    => $e->getMessage(),
+                // Never log $mid, credentials, or full response here.
+            ]);
 
             return VerificationResult::pending(['error' => $e->getMessage()]);
         }
@@ -39,15 +42,21 @@ class PaytmBusinessVerifier implements Verifier
 
         // Never trust status alone: the amount paid must match the order exactly.
         if ($this->toPaise($data['TXNAMOUNT'] ?? 0) !== $this->toPaise($order->amount)) {
-            Log::warning('Paytm amount mismatch', ['order' => $order->order_no, 'response' => $data]);
+            Log::warning('Paytm amount mismatch', [
+                'order_id'       => $order->order_no,
+                'expected_paise' => $this->toPaise($order->amount),
+                'got_paise'      => $this->toPaise($data['TXNAMOUNT'] ?? 0),
+                'status'         => $data['STATUS'] ?? null,
+                // Omit full provider response — may contain PII or credentials.
+            ]);
 
-            return VerificationResult::pending($data + ['error' => 'Amount mismatch']);
+            return VerificationResult::pending(['error' => 'Amount mismatch']);
         }
 
         return VerificationResult::paid(
-            utr: $data['BANKTXNID'] ?? null,
+            utr:   $data['BANKTXNID'] ?? null,
             txnId: $data['TXNID'] ?? null,
-            raw: $data,
+            raw:   $data,
         );
     }
 

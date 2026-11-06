@@ -26,6 +26,8 @@ class PgProvidersTest extends TestCase
 
         $this->merchant = User::create(['name' => 'Ravi', 'business_name' => 'Ravi Store', 'email' => 'ravi@example.com', 'password' => 'password123']);
         $this->merchant->regenerateApiCredentials();
+        // Allow redirect_url used in createOrder() to pass the allowlist check.
+        $this->merchant->update(['redirect_domains' => ['shop.test']]);
     }
 
     private function createOrder(float $amount = 499): string

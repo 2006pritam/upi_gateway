@@ -32,5 +32,11 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="GATEWAY_WEBHOOK_ALLOW_INSECURE" value="false"/>
+        <env name="GATEWAY_API_KEY_RATE_LIMIT" value="5"/>
+        <env name="GATEWAY_API_IP_RATE_LIMIT" value="600"/>
+        <env name="GATEWAY_ALLOW_INSECURE_REDIRECTS" value="true"/>
+        <env name="GATEWAY_CSP_ENFORCE" value="true"/>
+        <env name="SESSION_ENCRYPT" value="false"/>
     </php>
 </phpunit>

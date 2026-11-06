@@ -14,14 +14,27 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'admin' => \App\Http\Middleware\EnsureAdmin::class,
-            'active' => \App\Http\Middleware\EnsureActive::class,
+            'admin'   => \App\Http\Middleware\EnsureAdmin::class,
+            'active'  => \App\Http\Middleware\EnsureActive::class,
             'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,
         ]);
+
+        // AuthenticateSession invalidates sessions when the user's password hash
+        // changes, covering password changes AND API-key regeneration (which
+        // touches the password column to bump the hash seen by the middleware).
+        // It must come AFTER StartSession and AFTER Auth middleware.
+        $middleware->web(append: [
+            \Illuminate\Session\Middleware\AuthenticateSession::class,
+            \App\Http\Middleware\SecurityHeaders::class,
+        ]);
+
         $middleware->redirectUsersTo('/dashboard');
+
         // Paytm PG POSTs the customer back here from its own domain.
         $middleware->validateCsrfTokens(except: ['pay/*/return']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*') || $request->expectsJson());
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson()
+        );
     })->create();

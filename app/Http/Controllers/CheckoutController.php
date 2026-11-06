@@ -32,8 +32,10 @@ class CheckoutController extends Controller
         $order = $this->orders->check($order);
 
         return response()->json([
-            'status' => $order->status,
-            'redirect' => in_array($order->status, [Order::PAID, Order::EXPIRED]) ? $this->redirectUrl($order) : null,
+            'status'   => $order->status,
+            'redirect' => in_array($order->status, [Order::PAID, Order::EXPIRED])
+                ? $this->redirectUrl($order)
+                : null,
         ]);
     }
 
@@ -53,7 +55,6 @@ class CheckoutController extends Controller
 
     /**
      * Send the customer to the PG's hosted checkout (PhonePe PG / Paytm PG).
-     * The PG session is cached on the order so reopening the link reuses it.
      */
     public function start(Order $order)
     {
@@ -65,16 +66,14 @@ class CheckoutController extends Controller
         }
 
         $checkout = $order->provider_checkout;
-
         if (! $checkout || ($checkout['expires_at'] ?? 0) <= now()->timestamp + 30) {
             $verifier = $order->paymentAccount->verifier();
-
             try {
                 $checkout = $verifier->startCheckout($order, route('pay.return', $order));
             } catch (RuntimeException $e) {
-                return redirect()->route('pay.show', $order)->withErrors(['checkout' => $e->getMessage()]);
+                return redirect()->route('pay.show', $order)
+                    ->withErrors(['checkout' => $e->getMessage()]);
             }
-
             $order->forceFill(['provider_checkout' => $checkout])->save();
         }
 
@@ -84,15 +83,18 @@ class CheckoutController extends Controller
     }
 
     /**
-     * The PG sends the customer back here (Paytm POSTs, PhonePe GETs). We
-     * ignore whatever the PG posted and ask its Status API instead.
+     * The PG sends the customer back here. We ignore whatever the PG posted
+     * and ask its Status API instead.
      */
     public function return(Order $order)
     {
         $order = $this->orders->check($order->load('paymentAccount'), force: true);
 
         if ($order->status === Order::PAID && $order->redirect_url) {
-            return redirect()->away($this->redirectUrl($order));
+            $redirectUrl = $this->redirectUrl($order);
+            if ($redirectUrl !== null) {
+                return redirect()->away($redirectUrl);
+            }
         }
 
         return redirect()->route('pay.show', $order);
@@ -102,26 +104,44 @@ class CheckoutController extends Controller
     {
         abort_unless($order->isPending() && ! $order->paymentAccount->isHosted(), 404);
 
-        $writer = new Writer(new ImageRenderer(new RendererStyle(320, 1), new SvgImageBackEnd));
+        $writer = new Writer(
+            new ImageRenderer(new RendererStyle(320, 1), new SvgImageBackEnd)
+        );
 
         return response($writer->writeString($order->upiIntentUrl()), 200, [
-            'Content-Type' => 'image/svg+xml',
+            'Content-Type'  => 'image/svg+xml',
             'Cache-Control' => 'private, max-age=600',
         ]);
     }
 
+    /**
+     * Build the redirect URL — re-validates the host allowlist at redirect time
+     * so that a domain that was removed after order creation is no longer honoured.
+     */
     private function redirectUrl(Order $order): ?string
     {
         if (! $order->redirect_url) {
             return null;
         }
 
+        // Re-check at redirect time: merchant may have updated their allowlist.
+        $merchant = $order->user ?? $order->load('user')->user;
+        if (! $merchant->isRedirectUrlAllowed($order->redirect_url)) {
+            return null;
+        }
+
+        // Only allow https unless explicitly configured otherwise.
+        $scheme = strtolower(parse_url($order->redirect_url, PHP_URL_SCHEME) ?? '');
+        if ($scheme === 'http' && ! config('gateway.allow_insecure_redirects', false)) {
+            return null;
+        }
+
         $separator = str_contains($order->redirect_url, '?') ? '&' : '?';
 
         return $order->redirect_url.$separator.http_build_query([
-            'order_id' => $order->order_no,
+            'order_id'        => $order->order_no,
             'client_order_id' => $order->client_order_id,
-            'status' => $order->status,
+            'status'          => $order->status,
         ]);
     }
 }

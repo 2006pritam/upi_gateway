@@ -13,9 +13,10 @@ class WebhookLog extends Model
         'url',
         'payload',
         'response_code',
-        'response_body',
+        'response_body',  // always null (kept in schema for safe migration; never written)
         'success',
         'attempt',
+        'error_label',
     ];
 
     protected function casts(): array
