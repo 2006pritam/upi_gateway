@@ -20,15 +20,19 @@ The web root must be Laravel's `public/` directory. `storage/` and `bootstrap/ca
 
 ## Screenshots
 
-These are authentic application screenshots:
+The following screenshots show the actual Installation Wizard flow:
 
-![Application homepage](images/installation/home.png)
+### Database setup
 
-![Admin dashboard](images/installation/dashboard.png)
+![UPI Gateway MySQL database setup](images/installation/database-setup.png)
 
-![Payment account screen](images/installation/payment-account.png)
+### Successful migrations
 
-The three installer screenshots requested for this update were not present in the supplied attachment directory, and no clean wizard capture was available in this environment. No fabricated installer screenshots were added. Add the original `database-setup.png`, `migrations-success.png`, and `admin-account.png` files to `docs/images/installation/` before publishing visual wizard walkthroughs.
+![UPI Gateway successful migrations](images/installation/migrations-success.png)
+
+### Create administrator
+
+![UPI Gateway administrator account setup](images/installation/admin-account.png)
 
 ## After installation
 
