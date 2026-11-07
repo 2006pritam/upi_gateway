@@ -23,6 +23,17 @@
 
 ---
 
+> [!IMPORTANT]
+> **Development Notice — November 2026**
+>
+> We are actively working on bug fixes, security improvements, payment verification reliability, webhook delivery guarantees, and production-readiness enhancements.
+>
+> The project is currently undergoing additional testing and independent review. Some issues are still being addressed.
+>
+> **Production deployment is not recommended until all ongoing fixes and verification are complete.**
+>
+> Further updates will be published as improvements are completed and verified.
+
 ## 📖 Overview
 
 UPI Gateway is a self-hosted, multi-merchant payment management platform designed for businesses that want to integrate UPI payments into their applications.
