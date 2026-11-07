@@ -16,23 +16,23 @@
 
     <div>
         <label class="label">Email Address</label>
-        <input type="email" name="email" value="{{ old('email') }}" class="input @error('email') ring-red-400 @enderror" placeholder="admin@example.com" required>
-        @error('email')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+        <input type="email" name="email" value="{{ old('email') }}" @class(['input', 'ring-red-400 focus:ring-red-500' => $errors->has('email')]) placeholder="admin@example.com" required autocomplete="email">
+        @error('email')<p class="mt-1.5 flex items-start gap-1.5 text-xs text-red-600"><x-icon name="alert" class="mt-px w-3.5 h-3.5" /> <span>{{ $message }}</span></p>@enderror
     </div>
 
     <div>
         <label class="label">Password</label>
-        <input type="password" name="password" class="input @error('password') ring-red-400 @enderror" placeholder="Min 8 characters" required>
-        @error('password')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+        <input type="password" name="password" @class(['input', 'ring-red-400 focus:ring-red-500' => $errors->has('password')]) placeholder="Min 10 characters" required autocomplete="new-password">
+        @error('password')<p class="mt-1.5 flex items-start gap-1.5 text-xs text-red-600"><x-icon name="alert" class="mt-px w-3.5 h-3.5" /> <span>{{ $message }}</span></p>@enderror
     </div>
 
     <div>
         <label class="label">Confirm Password</label>
-        <input type="password" name="password_confirmation" class="input" required>
+        <input type="password" name="password_confirmation" class="input" required autocomplete="new-password">
     </div>
 
     <button type="submit" class="btn btn-primary w-full justify-center py-2.5">
-        Create Account & Finish →
+        Create account and finish <x-icon name="arrow-right" class="w-4 h-4" />
     </button>
 </form>
 @endsection

@@ -8,13 +8,22 @@
 @section('title', $greeting.', '.Str::before(auth()->user()->name, ' '))
 @section('subtitle', 'Here is what is happening with your payments today.')
 @section('actions')
-    <a href="{{ route('orders.index') }}" class="btn btn-secondary">View orders</a>
-    <a href="{{ route('orders.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Payment link</a>
+    <a href="{{ route('orders.index', ['environment' => $environment]) }}" class="btn btn-secondary">View orders</a>
+    @if ($environment === 'live')<a href="{{ route('orders.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Payment link</a>@endif
 @endsection
 
 @section('content')
+<div class="mb-6 flex items-center justify-between gap-4">
+    <div class="inline-flex rounded-lg bg-slate-100 p-1 text-sm font-medium">
+        <a href="{{ route('dashboard', ['environment' => 'live']) }}" class="rounded-md px-4 py-2 {{ $environment === 'live' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500' }}">Live</a>
+        <a href="{{ route('dashboard', ['environment' => 'sandbox']) }}" class="rounded-md px-4 py-2 {{ $environment === 'sandbox' ? 'bg-amber-400 text-amber-950 shadow-sm' : 'text-slate-500' }}">Sandbox · TEST</a>
+    </div>
+    @if ($environment === 'sandbox')
+        <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold tracking-wide text-amber-800">SIMULATED DATA</span>
+    @endif
+</div>
 @if ($stats['review_count'])
-    <a href="{{ route('orders.index', ['status' => 'review']) }}" class="mb-6 flex items-center gap-4 rounded-xl bg-sky-50 ring-1 ring-sky-200 px-5 py-4 hover:bg-sky-100/70 transition">
+    <a href="{{ route('orders.index', ['environment' => $environment, 'status' => 'review']) }}" class="mb-6 flex items-center gap-4 rounded-xl bg-sky-50 ring-1 ring-sky-200 px-5 py-4 hover:bg-sky-100/70 transition">
         <span class="grid place-items-center w-10 h-10 rounded-lg bg-sky-500 text-white shrink-0"><x-icon name="shield" class="w-5 h-5" /></span>
         <div class="flex-1">
             <div class="font-semibold text-sky-900">{{ $stats['review_count'] }} {{ Str::plural('payment', $stats['review_count']) }} waiting for your review</div>
@@ -27,8 +36,8 @@
 {{-- Stats --}}
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
     @foreach ([
-        ['Collected today', $inr($stats['today_amount']), $stats['today_count'].' '.Str::plural('payment', $stats['today_count']), 'banknotes', 'bg-emerald-50 text-emerald-600'],
-        ['Total collected', $inr($stats['total_amount']), $stats['paid_count'].' successful '.Str::plural('payment', $stats['paid_count']), 'chart', 'bg-brand-50 text-brand-600'],
+        [$environment === 'sandbox' ? 'Simulated today' : 'Collected today', $inr($stats['today_amount']), $stats['today_count'].' '.Str::plural('payment', $stats['today_count']), 'banknotes', 'bg-emerald-50 text-emerald-600'],
+        [$environment === 'sandbox' ? 'Total simulated' : 'Total collected', $inr($stats['total_amount']), $stats['paid_count'].' successful '.Str::plural('payment', $stats['paid_count']), 'chart', 'bg-brand-50 text-brand-600'],
         ['Pending orders', $stats['pending_count'], 'Waiting for customer payment', 'clock', 'bg-amber-50 text-amber-600'],
         ['Success rate', $stats['success_rate'] === null ? '—' : $stats['success_rate'].'%', 'Paid vs expired orders', 'check-circle', 'bg-sky-50 text-sky-600'],
     ] as [$label, $value, $hint, $icon, $tone])
@@ -48,7 +57,7 @@
     <div class="card xl:col-span-2">
         <div class="card-header">
             <div>
-                <div class="card-title">Collections · last 7 days</div>
+                <div class="card-title">{{ $environment === 'sandbox' ? 'Simulated payments' : 'Collections' }} · last 7 days</div>
                 <div class="text-2xl font-bold tracking-tight text-slate-900 mt-1">{{ $inr($weekTotal) }}</div>
             </div>
         </div>
@@ -108,7 +117,7 @@
 <div class="card overflow-hidden">
     <div class="card-header">
         <div class="card-title">Recent orders</div>
-        <a href="{{ route('orders.index') }}" class="text-sm font-medium text-brand-600 hover:text-brand-700 inline-flex items-center gap-1">View all <x-icon name="arrow-right" class="w-4 h-4" /></a>
+        <a href="{{ route('orders.index', ['environment' => $environment]) }}" class="text-sm font-medium text-brand-600 hover:text-brand-700 inline-flex items-center gap-1">View all <x-icon name="arrow-right" class="w-4 h-4" /></a>
     </div>
     @include('orders._table', ['orders' => $recentOrders])
 </div>

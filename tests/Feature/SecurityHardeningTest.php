@@ -2,18 +2,20 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\SendWebhook;
+use App\Http\Middleware\RedirectIfInstalled;
 use App\Models\AdminAuditLog;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\OrderService;
 use App\Services\Verifiers\PaytmBusinessVerifier;
+use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Request as HttpRequest;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class SecurityHardeningTest extends TestCase
@@ -25,33 +27,34 @@ class SecurityHardeningTest extends TestCase
     private function merchant(?string $webhookUrl = null, array $extra = []): User
     {
         $user = User::create(array_merge([
-            'name'          => 'Ravi',
+            'name' => 'Ravi',
             'business_name' => 'Ravi Store',
-            'email'         => 'ravi@example.com',
-            'password'      => 'password12345', // meets new min-10 policy
+            'email' => 'ravi@example.com',
+            'password' => 'password12345', // meets new min-10 policy
         ], $extra));
         $user->regenerateApiCredentials();
         $user->paymentAccounts()->create([
-            'provider'    => 'paytm_business',
-            'label'       => 'Main',
-            'upi_id'      => 'paytmqr123@paytm',
-            'payee_name'  => 'Ravi Store',
+            'provider' => 'paytm_business',
+            'label' => 'Main',
+            'upi_id' => 'paytmqr123@paytm',
+            'payee_name' => 'Ravi Store',
             'credentials' => ['mid' => 'TESTMID123'],
-            'is_default'  => true,
+            'is_default' => true,
         ]);
         if ($webhookUrl) {
             $user->forceFill(['webhook_url' => $webhookUrl])->save();
         }
+
         return $user;
     }
 
     private function admin(): User
     {
         return User::create([
-            'name'     => 'Admin',
-            'email'    => 'admin@example.com',
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
             'password' => 'adminpass123',
-            'role'     => 'admin',
+            'role' => 'admin',
         ]);
     }
 
@@ -66,9 +69,9 @@ class SecurityHardeningTest extends TestCase
     private function apiHeaders(User $user): array
     {
         return [
-            'X-Api-Key'    => $user->api_key,
+            'X-Api-Key' => $user->api_key,
             'X-Api-Secret' => $user->api_secret,
-            'Accept'       => 'application/json',
+            'Accept' => 'application/json',
         ];
     }
 
@@ -134,10 +137,10 @@ class SecurityHardeningTest extends TestCase
     public function test_registration_rejects_short_passwords(): void
     {
         $this->post('/register', [
-            'name'                  => 'Test',
-            'business_name'         => 'Test Co',
-            'email'                 => 'newuser@example.com',
-            'password'              => 'short',
+            'name' => 'Test',
+            'business_name' => 'Test Co',
+            'email' => 'newuser@example.com',
+            'password' => 'short',
             'password_confirmation' => 'short',
         ])->assertSessionHasErrors('password');
     }
@@ -145,10 +148,10 @@ class SecurityHardeningTest extends TestCase
     public function test_registration_accepts_10_char_passwords(): void
     {
         $this->post('/register', [
-            'name'                  => 'Test',
-            'business_name'         => 'Test Co',
-            'email'                 => 'newuser@example.com',
-            'password'              => 'password12',
+            'name' => 'Test',
+            'business_name' => 'Test Co',
+            'email' => 'newuser@example.com',
+            'password' => 'password12',
             'password_confirmation' => 'password12',
         ])->assertSessionHasNoErrors();
 
@@ -163,9 +166,9 @@ class SecurityHardeningTest extends TestCase
         // No redirect_domains set — all redirect URLs rejected.
 
         $this->postJson('/api/v1/orders', [
-            'amount'          => 100,
+            'amount' => 100,
             'client_order_id' => 'RD-1',
-            'redirect_url'    => 'https://evil.com/callback',
+            'redirect_url' => 'https://evil.com/callback',
         ], $this->apiHeaders($merchant))
             ->assertUnprocessable()
             ->assertJsonValidationErrors('redirect_url');
@@ -177,9 +180,9 @@ class SecurityHardeningTest extends TestCase
         $merchant->update(['redirect_domains' => ['merchant.test']]);
 
         $res = $this->postJson('/api/v1/orders', [
-            'amount'          => 100,
+            'amount' => 100,
             'client_order_id' => 'RD-2',
-            'redirect_url'    => 'https://merchant.test/callback',
+            'redirect_url' => 'https://merchant.test/callback',
         ], $this->apiHeaders($merchant))
             ->assertCreated();
 
@@ -192,9 +195,9 @@ class SecurityHardeningTest extends TestCase
         $merchant->update(['redirect_domains' => ['merchant.test']]);
 
         $this->postJson('/api/v1/orders', [
-            'amount'          => 100,
+            'amount' => 100,
             'client_order_id' => 'RD-3',
-            'redirect_url'    => 'https://app.merchant.test/cb',
+            'redirect_url' => 'https://app.merchant.test/cb',
         ], $this->apiHeaders($merchant))
             ->assertCreated();
     }
@@ -211,9 +214,9 @@ class SecurityHardeningTest extends TestCase
         ])]);
 
         $orderNo = $this->postJson('/api/v1/orders', [
-            'amount'          => 100,
+            'amount' => 100,
             'client_order_id' => 'RD-4',
-            'redirect_url'    => 'https://merchant.test/cb',
+            'redirect_url' => 'https://merchant.test/cb',
         ], $this->apiHeaders($merchant))->json('data.order_id');
 
         // Merchant removes the domain from their allowlist.
@@ -239,9 +242,9 @@ class SecurityHardeningTest extends TestCase
         config(['gateway.allow_insecure_redirects' => false]);
 
         $this->postJson('/api/v1/orders', [
-            'amount'          => 100,
+            'amount' => 100,
             'client_order_id' => 'RD-5',
-            'redirect_url'    => 'http://merchant.test/cb',
+            'redirect_url' => 'http://merchant.test/cb',
         ], $this->apiHeaders($merchant))
             ->assertUnprocessable()
             ->assertJsonValidationErrors('redirect_url');
@@ -252,11 +255,11 @@ class SecurityHardeningTest extends TestCase
     public function test_admin_cannot_mark_merchant_order_paid(): void
     {
         $merchant = $this->merchant();
-        $order    = $this->order($merchant);
-        $admin    = $this->admin();
+        $order = $this->order($merchant);
+        $admin = $this->admin();
 
         // Bypass password.confirm middleware in tests.
-        $this->withoutMiddleware(\Illuminate\Auth\Middleware\RequirePassword::class);
+        $this->withoutMiddleware(RequirePassword::class);
 
         $this->actingAs($admin)
             ->post("/orders/{$order->order_no}/mark-paid", ['utr' => '123456789012'])
@@ -268,11 +271,11 @@ class SecurityHardeningTest extends TestCase
     public function test_admin_cannot_approve_utr(): void
     {
         $merchant = $this->merchant();
-        $order    = $this->order($merchant);
+        $order = $this->order($merchant);
         $order->forceFill(['status' => Order::REVIEW, 'customer_utr' => '123456789012'])->save();
         $admin = $this->admin();
 
-        $this->withoutMiddleware(\Illuminate\Auth\Middleware\RequirePassword::class);
+        $this->withoutMiddleware(RequirePassword::class);
 
         $this->actingAs($admin)
             ->post("/orders/{$order->order_no}/approve-utr", ['bank_utr' => '123456789012'])
@@ -284,10 +287,10 @@ class SecurityHardeningTest extends TestCase
     public function test_admin_can_view_merchant_order(): void
     {
         $merchant = $this->merchant();
-        $order    = $this->order($merchant);
-        $admin    = $this->admin();
+        $order = $this->order($merchant);
+        $admin = $this->admin();
 
-        $this->withoutMiddleware(\Illuminate\Auth\Middleware\RequirePassword::class);
+        $this->withoutMiddleware(RequirePassword::class);
 
         $this->actingAs($admin)
             ->get("/orders/{$order->order_no}")
@@ -299,18 +302,18 @@ class SecurityHardeningTest extends TestCase
     public function test_admin_toggle_merchant_writes_audit_log(): void
     {
         $merchant = $this->merchant();
-        $admin    = $this->admin();
+        $admin = $this->admin();
 
-        $this->withoutMiddleware(\Illuminate\Auth\Middleware\RequirePassword::class);
+        $this->withoutMiddleware(RequirePassword::class);
 
         $this->actingAs($admin)
             ->post("/admin/merchants/{$merchant->id}/toggle")
             ->assertRedirect();
 
         $this->assertDatabaseHas('admin_audit_logs', [
-            'admin_id'     => $admin->id,
+            'admin_id' => $admin->id,
             'subject_type' => 'user',
-            'subject_id'   => $merchant->id,
+            'subject_id' => $merchant->id,
         ]);
 
         $log = AdminAuditLog::where('admin_id', $admin->id)->first();
@@ -331,7 +334,7 @@ class SecurityHardeningTest extends TestCase
 
         // Exhaust the 120-request allowance.
         for ($i = 0; $i < 120; $i++) {
-            \Illuminate\Support\Facades\RateLimiter::hit($limiterKey, 60);
+            RateLimiter::hit($limiterKey, 60);
         }
 
         $this->postJson('/api/v1/orders', [
@@ -360,7 +363,7 @@ class SecurityHardeningTest extends TestCase
         // Exhaust merchant1's allowance.
         $limiterKey = 'api-key:'.$merchant1->id;
         for ($i = 0; $i < 120; $i++) {
-            \Illuminate\Support\Facades\RateLimiter::hit($limiterKey, 60);
+            RateLimiter::hit($limiterKey, 60);
         }
 
         // merchant1 is blocked.
@@ -386,16 +389,18 @@ class SecurityHardeningTest extends TestCase
         $logSpy = [];
         Log::listen(function ($event) use (&$logSpy) {
             $logSpy[] = json_encode([
-                'level'   => $event->level,
+                'level' => $event->level,
                 'message' => $event->message,
                 'context' => $event->context,
             ]);
         });
 
         $merchant = $this->merchant();
-        $order    = $this->order($merchant);
+        $order = $this->order($merchant);
 
         app(PaytmBusinessVerifier::class)->check($order->load('paymentAccount'));
+
+        $this->assertNotEmpty($logSpy, 'Expected warning log was not captured');
 
         // Check no log entry contains the MID credential.
         foreach ($logSpy as $entry) {
@@ -407,25 +412,27 @@ class SecurityHardeningTest extends TestCase
     public function test_paytm_amount_mismatch_does_not_log_full_response(): void
     {
         Http::fake(['securegw.paytm.in/*' => Http::response([
-            'STATUS'     => 'TXN_SUCCESS',
-            'TXNAMOUNT'  => '999.00',   // mismatch — order amount is 100
-            'BANKTXNID'  => 'SECRET_UTR',
-            'CUSTID'     => 'CUST_PII',
+            'STATUS' => 'TXN_SUCCESS',
+            'TXNAMOUNT' => '999.00',   // mismatch — order amount is 100
+            'BANKTXNID' => 'SECRET_UTR',
+            'CUSTID' => 'CUST_PII',
         ])]);
 
         $logSpy = [];
         Log::listen(function ($event) use (&$logSpy) {
             $logSpy[] = json_encode([
-                'level'   => $event->level,
+                'level' => $event->level,
                 'message' => $event->message,
                 'context' => $event->context,
             ]);
         });
 
         $merchant = $this->merchant();
-        $order    = $this->order($merchant);
+        $order = $this->order($merchant);
 
         app(PaytmBusinessVerifier::class)->check($order->load('paymentAccount'));
+
+        $this->assertNotEmpty($logSpy, 'Expected warning log was not captured');
 
         foreach ($logSpy as $entry) {
             $this->assertStringNotContainsString('SECRET_UTR', $entry,
@@ -451,9 +458,9 @@ class SecurityHardeningTest extends TestCase
     public function test_x_request_id_present_even_on_auth_failure(): void
     {
         $response = $this->postJson('/api/v1/orders', [], [
-            'X-Api-Key'    => 'bad',
+            'X-Api-Key' => 'bad',
             'X-Api-Secret' => 'bad',
-            'Accept'       => 'application/json',
+            'Accept' => 'application/json',
         ]);
 
         $response->assertUnauthorized();
@@ -491,14 +498,48 @@ class SecurityHardeningTest extends TestCase
     public function test_csp_header_present_on_checkout_page(): void
     {
         $merchant = $this->merchant();
-        $order    = $this->order($merchant);
+        $order = $this->order($merchant);
 
         $response = $this->get("/pay/{$order->order_no}");
         $response->assertHeader('Content-Security-Policy');
 
         // CSP must include nonce directive (confirming pay-redirect nonce wiring works).
         $csp = $response->headers->get('Content-Security-Policy');
-        $this->assertStringContainsString("nonce-", $csp);
+        $this->assertStringContainsString('nonce-', $csp);
+    }
+
+    public function test_dashboard_markup_does_not_depend_on_blocked_inline_handlers(): void
+    {
+        $merchant = $this->merchant();
+        $response = $this->actingAs($merchant)->get('/dashboard')->assertOk();
+
+        $this->assertDoesNotMatchRegularExpression(
+            '/\son(?:click|change|input|load|submit)\s*=/i',
+            $response->getContent()
+        );
+    }
+
+    public function test_installer_does_not_expose_migration_exception_details(): void
+    {
+        $sqlitePath = tempnam(sys_get_temp_dir(), 'gateway-hardening-db-');
+        config(['installer.sqlite_path' => $sqlitePath]);
+
+        try {
+            Artisan::shouldReceive('call')->once()->andThrow(new \RuntimeException(
+                'SQLSTATE connection failed for db.internal with password super-secret'
+            ));
+
+            $response = $this
+                ->withoutMiddleware(RedirectIfInstalled::class)
+                ->postJson(route('install.migrate.run'));
+
+            $response->assertStatus(500)
+                ->assertJsonPath('message', 'Database migration failed. Check the application logs for details.')
+                ->assertDontSee('super-secret')
+                ->assertDontSee('db.internal');
+        } finally {
+            @unlink($sqlitePath);
+        }
     }
 
     /**
@@ -509,13 +550,13 @@ class SecurityHardeningTest extends TestCase
     public function test_paytm_pg_redirect_form_contains_nonce(): void
     {
         $merchant = $this->merchant();
-        $order    = $this->order($merchant);
+        $order = $this->order($merchant);
 
         // Build a fake checkout payload as PaytmPgVerifier would.
         $checkout = [
-            'type'       => 'form',
-            'url'        => 'https://securestage.paytmpayments.com/theia/api/v1/showPaymentPage?mid=PGMID&orderId=' . $order->order_no,
-            'fields'     => ['mid' => 'PGMID', 'orderId' => $order->order_no, 'txnToken' => 'tok123'],
+            'type' => 'form',
+            'url' => 'https://securestage.paytmpayments.com/theia/api/v1/showPaymentPage?mid=PGMID&orderId='.$order->order_no,
+            'fields' => ['mid' => 'PGMID', 'orderId' => $order->order_no, 'txnToken' => 'tok123'],
             'expires_at' => now()->addMinutes(14)->timestamp,
         ];
         $order->forceFill(['provider_checkout' => $checkout])->save();

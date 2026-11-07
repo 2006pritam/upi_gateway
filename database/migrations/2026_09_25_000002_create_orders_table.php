@@ -26,7 +26,7 @@ return new class extends Migration
             $table->json('provider_response')->nullable();
             $table->string('verified_by')->nullable(); // provider | manual
             $table->timestamp('paid_at')->nullable();
-            $table->timestamp('expires_at');
+            $table->timestamp('expires_at')->nullable();
             $table->timestamp('last_checked_at')->nullable();
             $table->timestamps();
 

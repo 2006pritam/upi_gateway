@@ -200,14 +200,14 @@ flowchart TD
 ## ⚙️ Technology Stack
 
 <p align="center">
-  <img src="https://skillicons.dev/icons?i=laravel,php,mysql,sqlite,js,tailwind,html,css&theme=light" alt="Technology Stack"/>
+  <img src="https://skillicons.dev/icons?i=laravel,php,mysql,js,tailwind,html,css&theme=light" alt="Technology Stack"/>
 </p>
 
 | Component | Technology |
 |---|---|
 | Backend Framework | Laravel 12 |
 | Programming Language | PHP 8.2+ |
-| Database | MySQL 8.0 / SQLite |
+| Database | MySQL 8.x (mandatory) |
 | Frontend | Blade / JavaScript |
 | Queue Processing | Laravel Queue |
 | API Authentication | API Key & Secret |
@@ -226,7 +226,7 @@ flowchart TD
 - Composer
 - Node.js 18+
 - NPM
-- SQLite or MySQL 8.0+
+- MySQL 8.x or MariaDB 10.x/11.x (verify against your hosting image before deployment)
 - Required PHP extensions for Laravel 12
 
 ### 1. Clone Repository
@@ -255,15 +255,7 @@ php artisan key:generate
 
 ### 4. Configure Database
 
-For SQLite:
-
-```bash
-touch database/database.sqlite
-
-php artisan migrate
-```
-
-For MySQL, configure your `.env` file before running migrations.
+For MySQL, configure your `.env` file before running migrations. SQLite is not supported by the application installer or runtime.
 
 ### 5. Create Administrator
 
@@ -364,6 +356,10 @@ X-Api-Secret: sec_xxx
 
 Full API documentation is available at `/docs` when the application is running.
 
+Sandbox credentials use the `test_key_...` / `test_sec_...` pair and create
+internal TEST transactions only. Live and Sandbox credentials, orders, account
+lists, webhook URLs, and financial totals are isolated.
+
 ### Create Payment Order
 
 **Request:**
@@ -386,8 +382,12 @@ curl -X POST https://yourdomain.com/api/v1/orders \
   "success": true,
   "data": {
     "order_id": "ORDAB12CD34EF56GH78",
+    "client_order_id": "INV1001",
     "amount": "199.00",
+    "currency": "INR",
     "status": "pending",
+    "environment": "live",
+    "test": false,
     "payment_url": "https://yourdomain.com/pay/ORDAB12CD34EF56GH78",
     "upi_intent": "upi://pay?pa=merchant@upi&am=199.00&tr=ORDAB12CD34EF56GH78",
     "expires_at": "2026-01-01T12:15:00+05:30"
@@ -409,6 +409,10 @@ Webhook events:
 
 - `order.paid`
 - `order.expired`
+- `order.under_review`
+- `order.failed` (Sandbox)
+- `order.pending` (Sandbox)
+- `order.timeout` (Sandbox)
 
 Each webhook request includes an `X-Signature` header containing an HMAC-SHA256 signature of the raw request body.
 
@@ -417,7 +421,7 @@ Each webhook request includes an `X-Signature` header containing an HMAC-SHA256 
 ```php
 $body = file_get_contents('php://input');
 
-$secret = getenv('UPI_GATEWAY_API_SECRET');
+$secret = getenv('PAYMENT_WEBHOOK_SECRET');
 
 $expected = hash_hmac(
     'sha256',
@@ -523,6 +527,27 @@ For production integrations, also implement replay protection, event idempotency
 ---
 
 ## 🏭 Production Deployment
+
+### Release checklist
+
+Set `APP_ENV=production`, `APP_DEBUG=false`, a generated `APP_KEY`, an HTTPS
+`APP_URL`, secure session cookies, and separate Live/Sandbox webhook URLs. Do
+not include `.env`, database files, `storage` contents, logs, archives,
+`vendor`, or `node_modules` in a release archive. Take a database backup before
+running migrations.
+
+The expiry compatibility migration keeps `orders.expires_at` nullable for
+forward compatibility. Its rollback intentionally stops with an actionable
+error when NULL rows exist; it never guesses an expiry or alters payment
+history. Resolve those rows under an approved data policy, verify them, and
+then rerun the rollback.
+
+On cPanel, point the document root at `public/`, select PHP 8.2+, enable PDO,
+PDO MySQL, cURL, mbstring, XML, OpenSSL, fileinfo, tokenizer, and
+JSON, then use a cron entry for `schedule:run` and a managed process or cron
+worker for `queue:work`. On a VPS, use PHP-FPM, Nginx or Apache, Supervisor or
+systemd for the queue worker, TLS, restricted `storage` permissions, and
+regular database backups.
 
 ### 1. Install Production Dependencies
 

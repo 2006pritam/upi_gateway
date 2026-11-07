@@ -27,10 +27,10 @@ Artisan::command('orders:check-pending', function (OrderService $orders) {
 })->purpose('Verify pending orders with providers and expire stale ones');
 
 Artisan::command('app:create-admin {email} {--name=Admin}', function (string $email) {
-    $password = $this->secret('Password (min 8 chars)');
+    $password = $this->secret('Password (min 10 chars)');
 
-    if (strlen((string) $password) < 8) {
-        return $this->error('Password must be at least 8 characters.');
+    if (strlen((string) $password) < 10) {
+        return $this->error('Password must be at least 10 characters.');
     }
 
     $user = User::updateOrCreate(['email' => $email], [

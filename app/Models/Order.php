@@ -9,13 +9,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     public const PENDING = 'pending';
+
     public const PAID = 'paid';
+
     public const EXPIRED = 'expired';
+
     public const REVIEW = 'review'; // customer submitted a UTR, merchant must confirm
+
+    public const FAILED = 'failed';
+
+    public const LIVE = 'live';
+
+    public const SANDBOX = 'sandbox';
 
     // Customer UTR submissions allowed per order, and how long after expiry
     // a customer may still submit one (they may have paid just before expiry).
     public const MAX_UTR_ATTEMPTS = 3;
+
     public const UTR_GRACE_MINUTES = 60;
 
     protected $fillable = [
@@ -42,7 +52,17 @@ class Order extends Model
             'last_checked_at' => 'datetime',
             'utr_submitted_at' => 'datetime',
             'provider_checkout' => 'array',
+            'sandbox_simulated_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Order $order) {
+            if ($order->expires_at === null) {
+                $order->expires_at = now()->addMinutes((int) config('gateway.order_expiry_minutes', 15));
+            }
+        });
     }
 
     public function getRouteKeyName(): string
@@ -76,15 +96,16 @@ class Order extends Model
      */
     public function acceptsCustomerUtr(): bool
     {
-        return $this->paymentAccount->provider === 'manual'
+        return $this->environment === self::LIVE
+            && $this->paymentAccount?->provider === 'manual'
             && $this->utr_attempts < self::MAX_UTR_ATTEMPTS
             && ($this->status === self::PENDING
-                || ($this->status === self::EXPIRED && $this->expires_at->gt(now()->subMinutes(self::UTR_GRACE_MINUTES))));
+                || ($this->status === self::EXPIRED && $this->expires_at?->gt(now()->subMinutes(self::UTR_GRACE_MINUTES))));
     }
 
     public function isPastExpiry(): bool
     {
-        return $this->expires_at->isPast();
+        return $this->expires_at?->isPast() ?? false;
     }
 
     /**
@@ -107,7 +128,9 @@ class Order extends Model
 
     public function paymentUrl(): string
     {
-        return route('pay.show', $this);
+        return $this->environment === self::SANDBOX
+            ? route('sandbox.pay.show', $this)
+            : route('pay.show', $this);
     }
 
     /**
@@ -121,18 +144,22 @@ class Order extends Model
             'amount' => $this->amount,
             'currency' => 'INR',
             'status' => $this->status,
+            'environment' => $this->environment,
+            'test' => $this->environment === self::SANDBOX,
             'utr' => $this->utr,
             'submitted_utr' => $this->status === self::REVIEW ? $this->customer_utr : null,
             'payment_url' => $this->paymentUrl(),
             // PG orders are paid on the PG's checkout, so there's no UPI link.
-            'upi_intent' => $this->paymentAccount->isHosted() ? null : $this->upiIntentUrl(),
+            'upi_intent' => $this->environment === self::SANDBOX
+                ? null
+                : ($this->paymentAccount->isHosted() ? null : $this->upiIntentUrl()),
             'customer' => [
                 'name' => $this->customer_name,
                 'email' => $this->customer_email,
                 'mobile' => $this->customer_mobile,
             ],
             'paid_at' => $this->paid_at?->toIso8601String(),
-            'expires_at' => $this->expires_at->toIso8601String(),
+            'expires_at' => $this->expires_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

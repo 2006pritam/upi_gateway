@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
+use App\Models\User;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,19 +17,22 @@ class OrderApiController extends Controller
     public function store(Request $request)
     {
         $merchant = $request->user();
+        $environment = $request->attributes->get('payment_environment', Order::LIVE);
 
         $data = $request->validate([
-            'amount'             => ['required', 'numeric', 'min:1', 'max:100000', 'decimal:0,2'],
-            'client_order_id'    => [
+            'amount' => ['required', 'numeric', 'min:1', 'max:100000', 'decimal:0,2'],
+            'client_order_id' => [
                 'required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_\-]+$/',
-                Rule::unique('orders')->where('user_id', $merchant->id),
+                Rule::unique('orders')->where(fn ($query) => $query
+                    ->where('user_id', $merchant->id)
+                    ->where('environment', $environment)),
             ],
-            'payment_account_id' => ['nullable', 'integer'],
-            'customer_name'      => ['nullable', 'string', 'max:100'],
-            'customer_email'     => ['nullable', 'email', 'max:255'],
-            'customer_mobile'    => ['nullable', 'string', 'max:20'],
-            'note'               => ['nullable', 'string', 'max:50'],
-            'redirect_url'       => ['nullable', 'url:https', 'max:500'],
+            'payment_account_id' => [Rule::prohibitedIf($environment === Order::SANDBOX), 'nullable', 'integer'],
+            'customer_name' => ['nullable', 'string', 'max:100'],
+            'customer_email' => ['nullable', 'email', 'max:255'],
+            'customer_mobile' => ['nullable', 'string', 'max:20'],
+            'note' => ['nullable', 'string', 'max:50'],
+            'redirect_url' => ['nullable', 'url:https', 'max:500'],
         ]);
 
         // Validate redirect_url against the merchant's domain allowlist.
@@ -35,7 +40,7 @@ class OrderApiController extends Controller
             $this->validateRedirectUrl($merchant, $data['redirect_url']);
         }
 
-        $order = $this->orders->create($merchant, $data);
+        $order = $this->orders->create($merchant, $data, $environment);
 
         return response()->json(['success' => true, 'data' => $order->toApiArray()], 201);
     }
@@ -45,7 +50,9 @@ class OrderApiController extends Controller
      */
     public function show(Request $request, string $orderNo)
     {
+        $environment = $request->attributes->get('payment_environment', Order::LIVE);
         $order = $request->user()->orders()
+            ->where('environment', $environment)
             ->where(fn ($q) => $q->where('order_no', $orderNo)->orWhere('client_order_id', $orderNo))
             ->firstOrFail();
 
@@ -59,7 +66,7 @@ class OrderApiController extends Controller
      *
      * @throws ValidationException
      */
-    private function validateRedirectUrl(\App\Models\User $merchant, string $url): void
+    private function validateRedirectUrl(User $merchant, string $url): void
     {
         $allowed = $merchant->allowedRedirectDomains();
 

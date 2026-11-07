@@ -16,26 +16,43 @@ class OrderService
     /**
      * @param  array{amount: numeric, client_order_id?: string, payment_account_id?: int, customer_name?: string, customer_email?: string, customer_mobile?: string, note?: string, redirect_url?: string}  $data
      */
-    public function create(User $merchant, array $data): Order
+    public function create(User $merchant, array $data, string $environment = Order::LIVE): Order
     {
-        // Lock this merchant's accounts so concurrent orders can't jointly
-        // push an account past its daily limit.
+        if ($environment === Order::SANDBOX) {
+            return $this->createSandbox($merchant, $data);
+        }
+
+        if ($environment !== Order::LIVE) {
+            throw ValidationException::withMessages(['environment' => 'Invalid payment environment.']);
+        }
+
+        // Serialize this merchant's order creation, including the case where
+        // no account exists yet, so daily-limit totals remain consistent.
         return DB::transaction(function () use ($merchant, $data) {
-            $merchant->paymentAccounts()->lockForUpdate()->get(['id']);
+            User::whereKey($merchant->id)->lockForUpdate()->firstOrFail();
 
             $account = $this->resolveAccount($merchant, (float) $data['amount'], $data['payment_account_id'] ?? null);
 
-            return $this->createFor($merchant, $account, $data);
+            return $this->createFor($merchant, $account, $data, Order::LIVE);
         });
     }
 
-    private function createFor(User $merchant, PaymentAccount $account, array $data): Order
+    private function createSandbox(User $merchant, array $data): Order
     {
-        $orderNo = 'ORD'.strtoupper(Str::random(16));
+        return DB::transaction(function () use ($merchant, $data) {
+            User::whereKey($merchant->id)->lockForUpdate()->firstOrFail();
+
+            return $this->createFor($merchant, null, $data, Order::SANDBOX);
+        });
+    }
+
+    private function createFor(User $merchant, ?PaymentAccount $account, array $data, string $environment): Order
+    {
+        $orderNo = ($environment === Order::SANDBOX ? 'TST' : 'ORD').strtoupper(Str::random(16));
 
         $order = new Order([
             'order_no' => $orderNo,
-            'payment_account_id' => $account->id,
+            'payment_account_id' => $account?->id,
             'client_order_id' => $data['client_order_id'] ?? $orderNo,
             'amount' => $data['amount'],
             'status' => Order::PENDING,
@@ -46,6 +63,7 @@ class OrderService
             'redirect_url' => $data['redirect_url'] ?? null,
             'expires_at' => now()->addMinutes(config('gateway.order_expiry_minutes')),
         ]);
+        $order->forceFill(['environment' => $environment]);
         $order->user()->associate($merchant);
         $order->save();
 
@@ -62,11 +80,36 @@ class OrderService
             return $order;
         }
 
+        // Orders created before the expiry compatibility fix may legitimately
+        // have a NULL expiry. Give them a fresh local expiry before any
+        // provider verifier or scheduler code dereferences the timestamp.
+        if ($order->expires_at === null) {
+            $order->forceFill([
+                'expires_at' => now()->addMinutes((int) config('gateway.order_expiry_minutes', 15)),
+            ])->save();
+
+            return $order->refresh();
+        }
+
+        if ($order->environment === Order::SANDBOX) {
+            return $order->isPastExpiry() ? $this->expire($order) : $order->refresh();
+        }
+
         // `force` skips the throttle, e.g. when the customer just returned from the PG.
         $claimed = Order::whereKey($order->id)
+            ->where('status', Order::PENDING)
             ->when(! $force, fn ($q) => $q->where(fn ($q) => $q->whereNull('last_checked_at')
                 ->orWhere('last_checked_at', '<=', now()->subSeconds(config('gateway.check_interval_seconds')))))
             ->update(['last_checked_at' => now()]);
+
+        // MySQL reports zero affected rows when a forced recheck occurs within
+        // the same second and writes the same timestamp value. A forced check
+        // intentionally bypasses the interval, so verify the state separately.
+        if ($force && ! $claimed) {
+            $claimed = Order::whereKey($order->id)
+                ->where('status', Order::PENDING)
+                ->exists();
+        }
 
         if ($claimed) {
             $result = $order->paymentAccount->verifier()->check($order);
@@ -87,11 +130,25 @@ class OrderService
     {
         try {
             $updated = DB::transaction(function () use ($order, $utr, $txnId, $raw, $verifiedBy) {
+                User::whereKey($order->user_id)->lockForUpdate()->firstOrFail();
                 $locked = Order::whereKey($order->id)->lockForUpdate()->first();
 
-                // Late payments (after expiry) are still real money, so accept them.
+                if ($locked->environment !== Order::LIVE) {
+                    throw ValidationException::withMessages(['order' => 'Sandbox orders cannot be paid through live payment handlers.']);
+                }
+
+                // Late payments after expiry are accepted; paid and review
+                // orders cannot be changed through this path.
                 if ($locked->status === Order::PAID) {
                     return false;
+                }
+
+                if ($locked->status === Order::REVIEW) {
+                    return false;
+                }
+
+                if ($utr !== null) {
+                    $this->ensureUtrUnused($locked, $utr);
                 }
 
                 $locked->forceFill([
@@ -114,7 +171,7 @@ class OrderService
         $order->refresh();
 
         if ($updated) {
-            SendWebhook::dispatch($order, 'order.paid');
+            SendWebhook::dispatch($order, 'order.paid')->afterCommit();
         }
 
         return $order;
@@ -129,7 +186,7 @@ class OrderService
         $order->refresh();
 
         if ($updated) {
-            SendWebhook::dispatch($order, 'order.expired');
+            SendWebhook::dispatch($order, 'order.expired')->afterCommit();
         }
 
         return $order;
@@ -143,27 +200,34 @@ class OrderService
     {
         $utr = $this->normalizeUtr($utr);
 
-        if (! $order->acceptsCustomerUtr()) {
-            throw ValidationException::withMessages(['utr' => 'UTR can no longer be submitted for this payment. Please contact the merchant.']);
-        }
+        $updated = DB::transaction(function () use ($order, $utr) {
+            User::whereKey($order->user_id)->lockForUpdate()->firstOrFail();
+            // Lock the row so concurrent submissions cannot both pass the
+            // acceptsCustomerUtr / ensureUtrUnused checks simultaneously.
+            $locked = Order::whereKey($order->id)->lockForUpdate()->first();
 
-        $this->ensureUtrUnused($order, $utr);
+            if (! $locked->load('paymentAccount')->acceptsCustomerUtr()) {
+                throw ValidationException::withMessages(['utr' => 'UTR can no longer be submitted for this payment. Please contact the merchant.']);
+            }
 
-        $updated = Order::whereKey($order->id)
-            ->whereIn('status', [Order::PENDING, Order::EXPIRED])
-            ->where('utr_attempts', '<', Order::MAX_UTR_ATTEMPTS)
-            ->update([
-                'status' => Order::REVIEW,
-                'customer_utr' => $utr,
-                'utr_submitted_at' => now(),
-                'utr_attempts' => DB::raw('utr_attempts + 1'),
-                'review_note' => null,
-            ]);
+            $this->ensureUtrUnused($locked, $utr);
+
+            return Order::whereKey($locked->id)
+                ->whereIn('status', [Order::PENDING, Order::EXPIRED])
+                ->where('utr_attempts', '<', Order::MAX_UTR_ATTEMPTS)
+                ->update([
+                    'status' => Order::REVIEW,
+                    'customer_utr' => $utr,
+                    'utr_submitted_at' => now(),
+                    'utr_attempts' => DB::raw('utr_attempts + 1'),
+                    'review_note' => null,
+                ]);
+        });
 
         $order->refresh();
 
         if ($updated) {
-            SendWebhook::dispatch($order, 'order.under_review');
+            SendWebhook::dispatch($order, 'order.under_review')->afterCommit();
         }
 
         return $order;
@@ -175,17 +239,35 @@ class OrderService
      */
     public function approveCustomerUtr(Order $order, string $bankUtr): Order
     {
-        if ($order->status !== Order::REVIEW) {
-            throw ValidationException::withMessages(['bank_utr' => 'This order is not waiting for review.']);
-        }
+        $bankUtr = $this->normalizeUtr($bankUtr);
 
-        if (! hash_equals($order->customer_utr, $this->normalizeUtr($bankUtr))) {
-            throw ValidationException::withMessages(['bank_utr' => "UTR doesn't match what the customer submitted. Check your bank/UPI app again, or reject."]);
-        }
+        DB::transaction(function () use ($order, $bankUtr) {
+            User::whereKey($order->user_id)->lockForUpdate()->firstOrFail();
+            // Lock the row to prevent a concurrent approve + reject race.
+            $locked = Order::whereKey($order->id)->lockForUpdate()->first();
 
-        $this->ensureUtrUnused($order, $order->customer_utr);
+            if ($locked->status !== Order::REVIEW) {
+                throw ValidationException::withMessages(['bank_utr' => 'This order is not waiting for review.']);
+            }
 
-        return $this->markPaid($order, $order->customer_utr, null, [], 'utr_review');
+            if (! hash_equals((string) $locked->customer_utr, $bankUtr)) {
+                throw ValidationException::withMessages(['bank_utr' => "UTR doesn't match what the customer submitted. Check your bank/UPI app again, or reject."]);
+            }
+
+            $this->ensureUtrUnused($locked, $locked->customer_utr);
+
+            $locked->forceFill([
+                'status' => Order::PAID,
+                'utr' => $locked->customer_utr,
+                'verified_by' => 'utr_review',
+                'paid_at' => now(),
+                'review_note' => null,
+            ])->save();
+
+            SendWebhook::dispatch($locked, 'order.paid')->afterCommit();
+        });
+
+        return $order->refresh();
     }
 
     /**
@@ -194,22 +276,29 @@ class OrderService
      */
     public function rejectCustomerUtr(Order $order, ?string $reason): Order
     {
-        if ($order->status !== Order::REVIEW) {
-            throw ValidationException::withMessages(['reason' => 'This order is not waiting for review.']);
-        }
+        $canRetry = DB::transaction(function () use ($order, $reason) {
+            // Lock to prevent a concurrent approve + reject race.
+            $locked = Order::whereKey($order->id)->lockForUpdate()->first();
 
-        $canRetry = $order->utr_attempts < Order::MAX_UTR_ATTEMPTS;
+            if ($locked->status !== Order::REVIEW) {
+                throw ValidationException::withMessages(['reason' => 'This order is not waiting for review.']);
+            }
 
-        Order::whereKey($order->id)->where('status', Order::REVIEW)->update([
-            'status' => $canRetry ? Order::PENDING : Order::EXPIRED,
-            'review_note' => $reason ?: "UTR {$order->customer_utr} was not found in the merchant's account.",
-            'expires_at' => $canRetry ? now()->addMinutes(config('gateway.order_expiry_minutes')) : $order->expires_at,
-        ]);
+            $canRetry = $locked->utr_attempts < Order::MAX_UTR_ATTEMPTS;
+
+            Order::whereKey($locked->id)->where('status', Order::REVIEW)->update([
+                'status' => $canRetry ? Order::PENDING : Order::EXPIRED,
+                'review_note' => $reason ?: "UTR {$locked->customer_utr} was not found in the merchant's account.",
+                'expires_at' => $canRetry ? now()->addMinutes(config('gateway.order_expiry_minutes')) : $locked->expires_at,
+            ]);
+
+            return $canRetry;
+        });
 
         $order->refresh();
 
         if (! $canRetry) {
-            SendWebhook::dispatch($order, 'order.expired');
+            SendWebhook::dispatch($order, 'order.expired')->afterCommit();
         }
 
         return $order;
@@ -236,6 +325,73 @@ class OrderService
         return strtoupper(preg_replace('/\s+/', '', $utr));
     }
 
+    public function simulateSandbox(Order $order, string $outcome): Order
+    {
+        if (! in_array($outcome, ['success', 'failed', 'pending', 'expired', 'timeout', 'invalid_reference'], true)) {
+            throw ValidationException::withMessages(['outcome' => 'Invalid sandbox outcome.']);
+        }
+
+        if ($outcome === 'invalid_reference') {
+            throw ValidationException::withMessages([
+                'transaction_reference' => 'The simulated transaction reference is invalid.',
+            ]);
+        }
+
+        $event = DB::transaction(function () use ($order, $outcome) {
+            $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->environment !== Order::SANDBOX) {
+                abort(404);
+            }
+
+            if (! $locked->isPending() || $locked->sandbox_simulated_at !== null) {
+                throw ValidationException::withMessages([
+                    'outcome' => 'This test order has already been simulated.',
+                ]);
+            }
+
+            $values = [
+                'sandbox_simulated_at' => now(),
+                'provider_response' => [
+                    'simulated' => true,
+                    'environment' => Order::SANDBOX,
+                    'outcome' => $outcome,
+                ],
+                'verified_by' => 'sandbox',
+            ];
+
+            $event = match ($outcome) {
+                'success' => 'order.paid',
+                'failed' => 'order.failed',
+                'expired' => 'order.expired',
+                'timeout' => 'order.timeout',
+                default => 'order.pending',
+            };
+
+            if ($outcome === 'success') {
+                $values += [
+                    'status' => Order::PAID,
+                    'utr' => 'TEST'.strtoupper(Str::random(16)),
+                    'provider_txn_id' => 'TEST_TXN_'.strtoupper(Str::random(12)),
+                    'paid_at' => now(),
+                ];
+            } elseif ($outcome === 'failed') {
+                $values['status'] = Order::FAILED;
+            } elseif ($outcome === 'expired') {
+                $values['status'] = Order::EXPIRED;
+            }
+
+            $locked->forceFill($values)->save();
+
+            return $event;
+        });
+
+        $order->refresh();
+        SendWebhook::dispatch($order, $event)->afterCommit();
+
+        return $order;
+    }
+
     /**
      * Pick the UPI account for a new order:
      * - an explicit `payment_account_id` is preferred while it is active and
@@ -246,11 +402,19 @@ class OrderService
      */
     private function resolveAccount(User $merchant, float $amount, ?int $accountId): PaymentAccount
     {
-        if ($accountId && ! $merchant->paymentAccounts()->whereKey($accountId)->exists()) {
-            throw ValidationException::withMessages(['payment_account_id' => 'This UPI account does not exist.']);
-        }
-
         $accounts = $merchant->paymentAccounts()->where('is_active', true)->withUsageToday()->get();
+
+        // Validate that an explicit account ID actually belongs to this merchant
+        // (IDOR guard). Use the already-loaded active collection first; only fire
+        // a second query when the ID is not in the active set (it may be inactive).
+        if ($accountId) {
+            $belongsToMerchant = $accounts->contains('id', $accountId)
+                || $merchant->paymentAccounts()->whereKey($accountId)->exists();
+
+            if (! $belongsToMerchant) {
+                throw ValidationException::withMessages(['payment_account_id' => 'This UPI account does not exist.']);
+            }
+        }
 
         $requested = $accountId ? $accounts->firstWhere('id', $accountId) : null;
         if ($requested?->canAccept($amount)) {

@@ -30,7 +30,7 @@
     <div class="flex gap-2 shrink-0">
         @foreach (\App\Models\User::ROTATION_MODES as $mode => $label)
             <label class="cursor-pointer">
-                <input type="radio" name="rotation_mode" value="{{ $mode }}" class="peer sr-only" @checked($rotation === $mode) onchange="this.form.submit()">
+                <input type="radio" name="rotation_mode" value="{{ $mode }}" class="peer sr-only" @checked($rotation === $mode) data-submit-on-change>
                 <span class="btn btn-secondary peer-checked:bg-brand-600 peer-checked:text-white peer-checked:ring-brand-600">{{ $label }}</span>
             </label>
         @endforeach
@@ -116,7 +116,7 @@
                 </form>
                 @if ($account->orders_count === 0)
                     <form method="POST" action="{{ route('accounts.destroy', $account) }}" class="ml-auto">@csrf @method('DELETE')
-                        <button onclick="return confirm('Delete this UPI account?')" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50 hover:text-red-700" title="Delete"><x-icon name="trash" class="w-4 h-4" /></button>
+                        <button data-confirm="Delete this UPI account?" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50 hover:text-red-700" title="Delete"><x-icon name="trash" class="w-4 h-4" /></button>
                     </form>
                 @endif
             </div>

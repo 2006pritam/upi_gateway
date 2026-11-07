@@ -20,10 +20,22 @@
 /storage/framework/views/*
 /storage/*.key
 /storage/pail
+/storage/installed
 
 # ── Database ──────────────────────────────────────────────────────────────────
 /database/*.sqlite
 /database/*.sqlite-journal
+/database/*.sqlite-shm
+/database/*.sqlite-wal
+upi_gateway
+*.sqlite
+*.sqlite3
+
+# ── Archives & Backups ────────────────────────────────────────────────────────
+*.zip
+*.tar.gz
+__MACOSX
+backup zip/
 
 # ── Testing ───────────────────────────────────────────────────────────────────
 .phpunit.result.cache

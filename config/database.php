@@ -17,7 +17,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => env('DB_CONNECTION', 'mysql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -32,6 +32,8 @@ return [
 
     'connections' => [
 
+        // SQLite is retained only for isolated PHPUnit runs. The installer and
+        // supported application runtime require MySQL.
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),

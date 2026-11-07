@@ -12,7 +12,8 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        $query = $request->user()->orders()->with('paymentAccount')->latest();
+        $environment = $request->query('environment') === Order::SANDBOX ? Order::SANDBOX : Order::LIVE;
+        $query = $request->user()->orders()->where('environment', $environment)->with('paymentAccount')->latest();
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
@@ -25,11 +26,13 @@ class OrderController extends Controller
         }
 
         $counts = $request->user()->orders()
+            ->where('environment', $environment)
             ->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
 
         return view('orders.index', [
             'orders' => $query->paginate(20)->withQueryString(),
             'counts' => $counts,
+            'environment' => $environment,
         ]);
     }
 
@@ -46,11 +49,11 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'amount'             => ['required', 'numeric', 'min:1', 'max:100000'],
+            'amount' => ['required', 'numeric', 'min:1', 'max:100000'],
             'payment_account_id' => ['nullable', 'integer'],
-            'customer_name'      => ['nullable', 'string', 'max:100'],
-            'customer_mobile'    => ['nullable', 'string', 'max:20'],
-            'note'               => ['nullable', 'string', 'max:50'],
+            'customer_name' => ['nullable', 'string', 'max:100'],
+            'customer_mobile' => ['nullable', 'string', 'max:20'],
+            'note' => ['nullable', 'string', 'max:50'],
         ]);
 
         $order = $this->orders->create($request->user(), $data);
@@ -65,8 +68,9 @@ class OrderController extends Controller
         $this->authorizeView($request, $order);
 
         return view('orders.show', [
-            'order'    => $order->load('paymentAccount', 'webhookLogs'),
-            'readOnly' => $request->user()->isAdmin() && $order->user_id !== $request->user()->id,
+            'order' => $order->load('paymentAccount', 'webhookLogs'),
+            'readOnly' => ($request->user()->isAdmin() && $order->user_id !== $request->user()->id)
+                || $order->environment === Order::SANDBOX,
         ]);
     }
 

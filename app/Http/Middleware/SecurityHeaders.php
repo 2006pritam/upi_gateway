@@ -58,7 +58,7 @@ class SecurityHeaders
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}'",
             // Google Fonts stylesheet. No inline styles remain after Vite migration.
-            "style-src 'self' https://fonts.googleapis.com",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com",
             // data: covers the SVG favicon and any inline SVG data URIs in views.
             "img-src 'self' data:",
@@ -116,6 +116,7 @@ class SecurityHeaders
         if (! isset($parts['scheme'], $parts['host'])) {
             return null;
         }
+
         return $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
     }
 }

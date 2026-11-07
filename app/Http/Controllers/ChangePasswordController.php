@@ -17,14 +17,14 @@ class ChangePasswordController extends Controller
     {
         $request->validate([
             'current_password' => ['required'],
-            'password'         => ['required', 'confirmed', $this->passwordRule()],
+            'password' => ['required', 'confirmed', $this->passwordRule()],
         ], [
             'password.confirmed' => 'The new passwords do not match.',
         ]);
 
         // Verify current password manually — Auth::logoutOtherDevices requires it.
         if (! Auth::guard('web')->validate([
-            'email'    => $request->user()->email,
+            'email' => $request->user()->email,
             'password' => $request->current_password,
         ])) {
             return back()->withErrors(['current_password' => 'Current password is incorrect.']);
@@ -49,6 +49,7 @@ class ChangePasswordController extends Controller
         if (app()->isProduction()) {
             $rule = $rule->uncompromised();
         }
+
         return $rule;
     }
 }

@@ -8,17 +8,17 @@
             <div>
                 <label for="current_password" class="label">Current password</label>
                 <input id="current_password" type="password" name="current_password"
-                       required autocomplete="current-password" class="input @error('current_password') ring-red-400 @enderror">
+                       required autocomplete="current-password" @class(['input', 'ring-red-400 focus:ring-red-500' => $errors->has('current_password')])>
                 @error('current_password')
-                    <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
+                    <p class="mt-1.5 flex items-start gap-1.5 text-xs text-red-600"><x-icon name="alert" class="mt-px w-3.5 h-3.5" /> <span>{{ $message }}</span></p>
                 @enderror
             </div>
             <div>
                 <label for="password" class="label">New password</label>
                 <input id="password" type="password" name="password"
-                       required autocomplete="new-password" class="input @error('password') ring-red-400 @enderror">
+                       required autocomplete="new-password" @class(['input', 'ring-red-400 focus:ring-red-500' => $errors->has('password')])>
                 @error('password')
-                    <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p>
+                    <p class="mt-1.5 flex items-start gap-1.5 text-xs text-red-600"><x-icon name="alert" class="mt-px w-3.5 h-3.5" /> <span>{{ $message }}</span></p>
                 @enderror
                 <p class="help">Minimum 10 characters.</p>
             </div>

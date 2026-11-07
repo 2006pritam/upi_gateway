@@ -12,17 +12,17 @@
 <div id="error" class="hidden mt-4 rounded-lg bg-red-50 ring-1 ring-red-200 px-4 py-3 text-sm text-red-700"></div>
 
 <div class="mt-6 space-y-3">
-    <button id="run-btn" onclick="runMigrations()" class="btn btn-primary w-full justify-center py-2.5">
+    <button id="run-btn" class="btn btn-primary w-full justify-center py-2.5">
         Run Migrations
     </button>
     <a id="next-btn" href="{{ route('install.admin') }}" class="btn btn-primary w-full justify-center py-2.5 hidden">
-        Continue → Create Admin →
+        Continue to administrator <x-icon name="arrow-right" class="w-4 h-4" />
     </a>
 </div>
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ $csp_nonce }}">
 async function runMigrations() {
     const btn = document.getElementById('run-btn');
     const out = document.getElementById('output');
@@ -38,11 +38,11 @@ async function runMigrations() {
         });
         const data = await res.json();
         if (data.success) {
-            out.textContent += data.output + '\n✅ Migrations completed successfully!';
+            out.textContent += data.output + '\nMigrations completed successfully.';
             btn.classList.add('hidden');
             document.getElementById('next-btn').classList.remove('hidden');
         } else {
-            out.textContent += '❌ Failed.';
+            out.textContent += 'Migration failed.';
             err.textContent = data.message;
             err.classList.remove('hidden');
             btn.disabled = false;
@@ -55,5 +55,6 @@ async function runMigrations() {
         btn.textContent = 'Retry';
     }
 }
+document.getElementById('run-btn').addEventListener('click', runMigrations);
 </script>
 @endpush

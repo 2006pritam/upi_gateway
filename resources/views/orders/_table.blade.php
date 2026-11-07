@@ -18,7 +18,7 @@
         </thead>
         <tbody class="divide-y divide-slate-100 bg-white">
             @foreach ($orders as $order)
-                <tr class="hover:bg-slate-50/80 cursor-pointer transition" onclick="window.location='{{ route('orders.show', $order) }}'">
+                <tr class="hover:bg-slate-50/80 cursor-pointer transition" data-href="{{ route('orders.show', $order) }}">
                     <td class="td">
                         <a href="{{ route('orders.show', $order) }}" class="font-mono text-[13px] font-medium text-slate-900 hover:text-brand-600">{{ $order->order_no }}</a>
                         @if ($order->client_order_id !== $order->order_no)

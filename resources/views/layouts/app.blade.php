@@ -19,6 +19,7 @@
         $sections['Admin'] = [
             ['admin.merchants', 'Merchants', 'users', 'admin.merchants*'],
             ['admin.orders', 'All Orders', 'chart', 'admin.orders'],
+            ['admin.transactions.index', 'Transaction Debugger', 'search', 'admin.transactions.*'],
         ];
     }
 @endphp
@@ -26,11 +27,11 @@
     {{-- Mobile top bar --}}
     <div class="lg:hidden sticky top-0 z-30 flex items-center justify-between bg-white/90 backdrop-blur border-b border-slate-200 px-4 h-14">
         <a href="{{ route('dashboard') }}"><x-logo /></a>
-        <button type="button" onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full'); document.getElementById('backdrop').classList.toggle('hidden')" class="btn btn-ghost p-2" aria-label="Open menu">
+        <button type="button" data-sidebar-toggle class="btn btn-ghost p-2" aria-label="Open menu">
             <x-icon name="menu" class="w-6 h-6" />
         </button>
     </div>
-    <div id="backdrop" class="hidden lg:hidden fixed inset-0 z-30 bg-slate-900/40" onclick="this.classList.add('hidden'); document.getElementById('sidebar').classList.add('-translate-x-full')"></div>
+    <div id="backdrop" data-sidebar-close class="hidden lg:hidden fixed inset-0 z-30 bg-slate-900/40"></div>
 
     {{-- Sidebar --}}
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full lg:translate-x-0 transition-transform bg-white border-r border-slate-200 flex flex-col">
@@ -91,7 +92,7 @@
                     <h1 class="text-2xl font-bold tracking-tight text-slate-900 truncate">@yield('title')</h1>
                     @hasSection('subtitle')<p class="mt-1 text-sm text-slate-500">@yield('subtitle')</p>@endif
                 </div>
-                <div class="flex items-center gap-2">@yield('actions')</div>
+                <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">@yield('actions')</div>
             </div>
 
             @if (session('status'))

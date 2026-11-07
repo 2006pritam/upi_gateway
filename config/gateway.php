@@ -14,17 +14,17 @@ return [
     'phonepe_pg' => [
         'sandbox' => [
             'token_url' => 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token',
-            'base_url'  => 'https://api-preprod.phonepe.com/apis/pg-sandbox',
+            'base_url' => 'https://api-preprod.phonepe.com/apis/pg-sandbox',
         ],
         'production' => [
             'token_url' => 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token',
-            'base_url'  => 'https://api.phonepe.com/apis/pg',
+            'base_url' => 'https://api.phonepe.com/apis/pg',
         ],
     ],
 
     // Official Paytm Payment Gateway.
     'paytm_pg' => [
-        'sandbox'    => env('PAYTM_PG_SANDBOX_URL', 'https://securestage.paytmpayments.com'),
+        'sandbox' => env('PAYTM_PG_SANDBOX_URL', 'https://securestage.paytmpayments.com'),
         'production' => env('PAYTM_PG_PRODUCTION_URL', 'https://secure.paytmpayments.com'),
     ],
 
@@ -49,6 +49,6 @@ return [
     'api_key_rate_limit' => (int) env('GATEWAY_API_KEY_RATE_LIMIT', 120),
 
     // Per-IP request limit per minute across all API keys.
-    'api_ip_rate_limit'  => (int) env('GATEWAY_API_IP_RATE_LIMIT', 600),
+    'api_ip_rate_limit' => (int) env('GATEWAY_API_IP_RATE_LIMIT', 600),
 
 ];

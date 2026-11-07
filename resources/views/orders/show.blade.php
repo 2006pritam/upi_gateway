@@ -10,8 +10,9 @@
     $details = [
         'Order ID' => [$order->order_no, true],
         'Your reference' => [$order->client_order_id, true],
-        'Payment account' => [$order->paymentAccount->label.' · '.($order->paymentAccount->upi_id ?? $order->paymentAccount->providerLabel()), false],
-        'Verification' => [$order->paymentAccount->providerLabel(), false],
+        'Environment' => [strtoupper($order->environment).($order->environment === 'sandbox' ? ' · TEST ONLY' : ''), false],
+        'Payment account' => [$order->paymentAccount ? $order->paymentAccount->label.' · '.($order->paymentAccount->upi_id ?? $order->paymentAccount->providerLabel()) : 'Internal TEST simulator', false],
+        'Verification' => [$order->paymentAccount?->providerLabel() ?? 'Sandbox simulation', false],
         'UTR' => [$order->utr, true],
         'Customer-submitted UTR' => [$order->customer_utr ? $order->customer_utr.($order->utr_attempts > 1 ? " (attempt {$order->utr_attempts})" : '') : null, true],
         'Provider txn ID' => [$order->provider_txn_id, true],
@@ -30,11 +31,13 @@
     if ($order->status === 'review') {
         $timeline[] = ['Waiting for your review', null, 'shield', 'bg-sky-100 text-sky-700'];
     } elseif ($order->status === 'paid') {
-        $timeline[] = ['Payment received'.match ($order->verified_by) { 'manual' => ' (marked manually)', 'utr_review' => ' (UTR matched)', default => ' (auto verified)' }, $order->paid_at, 'check', 'bg-emerald-100 text-emerald-700'];
+        $timeline[] = ['Payment received'.match ($order->verified_by) { 'manual' => ' (marked manually)', 'utr_review' => ' (UTR matched)', 'sandbox' => ' (TEST simulation)', default => ' (auto verified)' }, $order->paid_at, 'check', 'bg-emerald-100 text-emerald-700'];
+    } elseif ($order->status === 'failed') {
+        $timeline[] = ['TEST payment failed', $order->sandbox_simulated_at, 'x', 'bg-red-100 text-red-700'];
     } elseif ($order->status === 'expired') {
         $timeline[] = ['Link expired without payment', $order->expires_at, 'clock', 'bg-slate-100 text-slate-500'];
     } else {
-        $timeline[] = ['Waiting for payment · expires '.$order->expires_at->diffForHumans(), null, 'clock', 'bg-amber-100 text-amber-700'];
+        $timeline[] = ['Waiting for payment · '.($order->expires_at ? 'expires '.$order->expires_at->diffForHumans() : 'expiry not recorded'), null, 'clock', 'bg-amber-100 text-amber-700'];
     }
 @endphp
 
@@ -43,6 +46,9 @@
 @endsection
 
 @section('content')
+@if ($order->environment === 'sandbox')
+    <div class="mb-6 rounded-xl bg-amber-100 px-5 py-4 text-sm font-semibold text-amber-900 ring-1 ring-amber-300">SANDBOX · TEST TRANSACTION · This order never contacts a real payment provider.</div>
+@endif
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
         <div class="card">
@@ -60,15 +66,16 @@
         <div class="card overflow-hidden">
             <div class="card-header">
                 <div class="card-title">Webhook deliveries</div>
-                @if ($order->user->webhook_url)<span class="text-xs text-slate-500 font-mono truncate max-w-xs">{{ $order->user->webhook_url }}</span>@endif
+                @php $webhookUrl = $order->environment === 'sandbox' ? $order->user->sandbox_webhook_url : $order->user->webhook_url; @endphp
+                @if ($webhookUrl)<span class="text-xs text-slate-500 font-mono truncate max-w-xs">{{ $webhookUrl }}</span>@endif
             </div>
             @if ($order->webhookLogs->isEmpty())
-                <x-empty icon="link" :title="$order->user->webhook_url ? 'No webhooks sent yet' : 'No webhook URL set'"
-                    :text="$order->user->webhook_url ? 'Events are sent when the order is paid or expires.' : 'Add a webhook URL to get notified on your server when payments complete.'">
-                    @unless ($order->user->webhook_url)<a href="{{ route('settings') }}" class="btn btn-secondary">Set webhook URL</a>@endunless
+                <x-empty icon="link" :title="$webhookUrl ? 'No webhooks sent yet' : 'No webhook URL set'"
+                    :text="$webhookUrl ? 'Events are sent when the order status changes.' : 'Add the matching environment webhook URL to receive events.'">
+                    @unless ($webhookUrl)<a href="{{ route('settings') }}" class="btn btn-secondary">Set webhook URL</a>@endunless
                 </x-empty>
             @else
-                <table class="min-w-full divide-y divide-slate-100">
+                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
                     <thead class="bg-slate-50/70"><tr><th class="th">Event</th><th class="th">Attempt</th><th class="th">Response</th><th class="th">Time</th></tr></thead>
                     <tbody class="divide-y divide-slate-100">
                     @foreach ($order->webhookLogs->sortByDesc('id') as $log)
@@ -85,7 +92,7 @@
                         </tr>
                     @endforeach
                     </tbody>
-                </table>
+                </table></div>
             @endif
         </div>
     </div>
@@ -107,7 +114,7 @@
             </ol>
         </div>
 
-        @if ($order->status === 'review')
+        @if (! $readOnly && $order->status === 'review')
             <div class="card ring-2 ring-sky-400">
                 <div class="card-header bg-sky-50/60 rounded-t-xl">
                     <div class="card-title flex items-center gap-2"><x-icon name="shield" class="w-5 h-5 text-sky-600" /> Verify customer's payment</div>
@@ -141,11 +148,11 @@
                             @endif
                         </p>
                         <input name="reason" maxlength="150" placeholder="Reason shown to customer (optional)" class="input mb-3">
-                        <button onclick="return confirm('Reject this UTR?')" class="btn btn-danger w-full"><x-icon name="x" class="w-4 h-4" /> Reject UTR</button>
+                        <button data-confirm="Reject this UTR?" class="btn btn-danger w-full"><x-icon name="x" class="w-4 h-4" /> Reject UTR</button>
                     </form>
                 </div>
             </div>
-        @elseif ($order->status !== 'paid')
+        @elseif (! $readOnly && $order->status !== 'paid')
             <div class="card">
                 <div class="card-header"><div class="card-title">Actions</div></div>
                 <div class="p-5 space-y-5">
@@ -159,7 +166,7 @@
                         <div class="text-sm font-semibold text-slate-900">Mark as paid manually</div>
                         <p class="text-xs text-slate-500 mt-1 mb-3">Only after you see <b>₹{{ number_format($order->amount, 2) }}</b> credited in your bank or UPI app.</p>
                         <input name="utr" required placeholder="12-digit UTR / reference no." class="input font-mono mb-3">
-                        <button onclick="return confirm('Confirm you have received ₹{{ number_format($order->amount, 2) }} for this order?')" class="btn btn-success w-full"><x-icon name="check" class="w-4 h-4" /> Mark as paid</button>
+                        <button data-confirm="Confirm you have received ₹{{ number_format($order->amount, 2) }} for this order?" class="btn btn-success w-full"><x-icon name="check" class="w-4 h-4" /> Mark as paid</button>
                     </form>
                 </div>
             </div>

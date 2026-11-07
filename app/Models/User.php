@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class User extends Authenticatable
@@ -15,8 +17,8 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $attributes = [
-        'role'          => 'merchant',
-        'is_active'     => true,
+        'role' => 'merchant',
+        'is_active' => true,
         'rotation_mode' => 'random',
     ];
 
@@ -29,12 +31,13 @@ class User extends Authenticatable
         'phone',
         'is_active',
         'webhook_url',
+        'sandbox_webhook_url',
         'rotation_mode',
         'redirect_domains',
     ];
 
     public const ROTATION_MODES = [
-        'random'  => 'Random rotation',
+        'random' => 'Random rotation',
         'default' => 'Default account first',
     ];
 
@@ -42,18 +45,33 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'api_secret',
+        'sandbox_api_secret',
     ];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'is_active'         => 'boolean',
-            'api_secret'        => 'encrypted',
-            'redirect_domains'  => 'array',
-            'api_last_used_at'  => 'datetime',
+            'password' => 'hashed',
+            'is_active' => 'boolean',
+            'api_secret' => 'encrypted',
+            'sandbox_api_secret' => 'encrypted',
+            'redirect_domains' => 'array',
+            'api_last_used_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (User $user) {
+            if ($user->role === 'admin' && Schema::hasTable('installation_guards')) {
+                DB::table('installation_guards')->insertOrIgnore([
+                    'name' => 'primary_admin',
+                    'user_id' => $user->id,
+                    'created_at' => now(),
+                ]);
+            }
+        });
     }
 
     public function paymentAccounts(): HasMany
@@ -88,9 +106,31 @@ class User extends Authenticatable
      */
     public function regenerateApiCredentials(): void
     {
-        $this->api_key    = 'key_'.Str::random(24);
+        $this->api_key = 'key_'.Str::random(24);
         $this->api_secret = 'sec_'.Str::random(40);
         $this->save();
+    }
+
+    /** @return array{key: string, secret: string} */
+    public function regenerateSandboxApiCredentials(): array
+    {
+        $key = 'test_key_'.Str::random(24);
+        $secret = 'test_sec_'.Str::random(40);
+
+        $this->forceFill([
+            'sandbox_api_key' => $key,
+            'sandbox_api_secret' => $secret,
+        ])->save();
+
+        return ['key' => $key, 'secret' => $secret];
+    }
+
+    public function revokeSandboxApiCredentials(): void
+    {
+        $this->forceFill([
+            'sandbox_api_key' => null,
+            'sandbox_api_secret' => null,
+        ])->save();
     }
 
     /**

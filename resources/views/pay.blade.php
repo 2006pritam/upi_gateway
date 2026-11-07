@@ -4,7 +4,7 @@
 @php
     $merchant = $order->user->displayName();
     $amount = number_format($order->amount, 2);
-    $totalSeconds = max(1, $order->created_at->diffInSeconds($order->expires_at));
+    $totalSeconds = max(1, $order->created_at->diffInSeconds($order->expires_at ?? now()->addMinutes(config('gateway.order_expiry_minutes', 15))));
     $apps = [
         ['GPay',    'tez://upi/pay',   'text-[#1a73e8]', 'images/upi/gpay.png'],
         ['PhonePe', 'phonepe://pay',   'text-[#5f259f]', 'images/upi/phonepe.png'],
@@ -25,7 +25,7 @@
 
             {{-- Summary --}}
             <div class="md:col-span-2 relative bg-slate-950 text-white p-6 sm:p-8 flex flex-col overflow-hidden">
-                <div class="absolute inset-0 opacity-50" class="hero-gradient"></div>
+                <div class="hero-gradient absolute inset-0 opacity-50"></div>
                 <div class="relative flex items-center gap-3">
                     <x-avatar :name="$merchant" size="w-11 h-11 text-base" class="!bg-white/10 !text-white ring-1 ring-white/20" />
                     <div class="min-w-0">
@@ -146,9 +146,9 @@
                             <div class="relative w-10 h-10">
                                 <svg viewBox="0 0 36 36" class="w-10 h-10 -rotate-90">
                                     <circle cx="18" cy="18" r="16" fill="none" stroke="rgb(0 0 0 / .08)" stroke-width="3" />
-                                    <circle id="ring" cx="18" cy="18" r="16" fill="none" stroke="#818cf8" stroke-width="3" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="0" class="ring-transition" />
+                                    <circle id="ring-pg" cx="18" cy="18" r="16" fill="none" stroke="#818cf8" stroke-width="3" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="0" class="ring-transition" />
                                 </svg>
-                                <div id="timer" class="absolute inset-0 grid place-items-center font-mono text-[10px] font-medium text-slate-700">--:--</div>
+                                <div id="timer-pg" class="absolute inset-0 grid place-items-center font-mono text-[10px] font-medium text-slate-700">--:--</div>
                             </div>
                             <div class="text-sm text-slate-500">Complete payment before time runs out</div>
                         </div>
@@ -230,7 +230,7 @@
 <script nonce="{{ $csp_nonce }}">
 (() => {
     const initialStatus = @json($order->status);
-    const expiresAt = {{ $order->expires_at->getTimestampMs() }};
+    const expiresAt = {{ ($order->expires_at ?? now()->addMinutes(config('gateway.order_expiry_minutes', 15)))->getTimestampMs() }};
     const total = {{ $totalSeconds }};
     const timer = document.getElementById('timer');
     const ring = document.getElementById('ring');
@@ -239,9 +239,17 @@
     const tick = () => {
         if (!timer) return;
         const left = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
-        timer.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
-        ring.style.strokeDashoffset = (100.5 * (1 - left / total)).toFixed(2);
-        ring.style.stroke = left < 60 ? '#f87171' : '#818cf8';
+        const display = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
+        const offset = (100.5 * (1 - left / total)).toFixed(2);
+        const stroke = left < 60 ? '#f87171' : '#818cf8';
+        timer.textContent = display;
+        ring.style.strokeDashoffset = offset;
+        ring.style.stroke = stroke;
+        // Hosted-PG secondary timer widget (different IDs to avoid duplicate-id)
+        const timerPg = document.getElementById('timer-pg');
+        const ringPg  = document.getElementById('ring-pg');
+        if (timerPg) timerPg.textContent = display;
+        if (ringPg)  { ringPg.style.strokeDashoffset = offset; ringPg.style.stroke = stroke; }
     };
     tick();
     setInterval(tick, 1000);

@@ -5,13 +5,13 @@
 @section('content')
 <form method="POST" action="{{ route('register') }}">
     @csrf
-    <div class="grid grid-cols-2 gap-x-3">
+    <div class="grid sm:grid-cols-2 gap-x-3">
         <x-input name="name" label="Your name" required autofocus autocomplete="name" />
         <x-input name="business_name" label="Business name" required />
     </div>
     <x-input name="email" label="Work email" type="email" required autocomplete="email" placeholder="you@business.com" />
     <x-input name="phone" label="Mobile number" placeholder="Optional" autocomplete="tel" />
-    <div class="grid grid-cols-2 gap-x-3">
+    <div class="grid sm:grid-cols-2 gap-x-3">
         <x-input name="password" label="Password" type="password" required autocomplete="new-password" placeholder="Min 8 chars" />
         <x-input name="password_confirmation" label="Confirm" type="password" required autocomplete="new-password" />
     </div>

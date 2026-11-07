@@ -25,11 +25,11 @@ class PhonePePgVerifier implements HostedCheckout, Verifier
             $order->paymentAccount,
             fn (PendingRequest $http, string $base) => $http->post("$base/checkout/v2/pay", [
                 'merchantOrderId' => $order->order_no,
-                'amount'          => $this->toPaise($order->amount),
-                'expireAfter'     => max(300, min(3600, $secondsLeft)),
-                'paymentFlow'     => [
-                    'type'         => 'PG_CHECKOUT',
-                    'message'      => $order->note ?: 'Payment for '.$order->client_order_id,
+                'amount' => $this->toPaise($order->amount),
+                'expireAfter' => max(300, min(3600, $secondsLeft)),
+                'paymentFlow' => [
+                    'type' => 'PG_CHECKOUT',
+                    'message' => $order->note ?: 'Payment for '.$order->client_order_id,
                     'merchantUrls' => ['redirectUrl' => $returnUrl],
                 ],
                 'metaInfo' => ['udf1' => $order->client_order_id],
@@ -41,20 +41,17 @@ class PhonePePgVerifier implements HostedCheckout, Verifier
         if (! $response->successful() || ! $url) {
             // Log only safe fields — never log client_secret, full response body with PII.
             Log::warning('PhonePe create payment failed', [
-                'order_id'    => $order->order_no,
+                'order_id' => $order->order_no,
                 'http_status' => $response->status(),
-                'message'     => $response->json('message') ?? 'no message',
+                'message' => $response->json('message') ?? 'no message',
             ]);
 
-            throw new RuntimeException(
-                'PhonePe could not start the payment: '
-                .($response->json('message') ?? 'HTTP '.$response->status())
-            );
+            throw new RuntimeException('PhonePe could not start the payment. Please try again.');
         }
 
         return [
-            'type'       => 'redirect',
-            'url'        => $url,
+            'type' => 'redirect',
+            'url' => $url,
             'expires_at' => (int) (($response->json('expireAt') ?? now()->addMinutes(15)->getTimestampMs()) / 1000),
         ];
     }
@@ -79,12 +76,24 @@ class PhonePePgVerifier implements HostedCheckout, Verifier
             return VerificationResult::pending($data);
         }
 
+        // Verify the merchant order ID in the response matches our order.
+        // PhonePe v2 status response returns `merchantOrderId` for our order number;
+        // `orderId` is PhonePe's internal ID and must not be used for this check.
+        if (($data['merchantOrderId'] ?? null) !== $order->order_no) {
+            Log::warning('PhonePe order ID mismatch', [
+                'order_id' => $order->order_no,
+                'response_id' => $data['merchantOrderId'] ?? null,
+            ]);
+
+            return VerificationResult::pending(['error' => 'Order ID mismatch']);
+        }
+
         if ((int) ($data['amount'] ?? 0) !== $this->toPaise($order->amount)) {
             Log::warning('PhonePe amount mismatch', [
-                'order_id'       => $order->order_no,
+                'order_id' => $order->order_no,
                 'expected_paise' => $this->toPaise($order->amount),
-                'got_paise'      => (int) ($data['amount'] ?? 0),
-                'state'          => $data['state'] ?? null,
+                'got_paise' => (int) ($data['amount'] ?? 0),
+                'state' => $data['state'] ?? null,
                 // Omit full response — may contain PII or customer payment details.
             ]);
 
@@ -94,9 +103,9 @@ class PhonePePgVerifier implements HostedCheckout, Verifier
         $payment = collect($data['paymentDetails'] ?? [])->firstWhere('state', 'COMPLETED') ?? [];
 
         return VerificationResult::paid(
-            utr:   $payment['rail']['utr'] ?? null,
+            utr: $payment['rail']['utr'] ?? null,
             txnId: $payment['transactionId'] ?? ($data['orderId'] ?? null),
-            raw:   $data,
+            raw: $data,
         );
     }
 
@@ -133,10 +142,10 @@ class PhonePePgVerifier implements HostedCheckout, Verifier
         }
 
         $response = Http::timeout(15)->asForm()->acceptJson()->post($tokenUrl, [
-            'client_id'      => $account->credential('client_id'),
+            'client_id' => $account->credential('client_id'),
             'client_version' => $account->credential('client_version'),
-            'client_secret'  => $account->credential('client_secret'),
-            'grant_type'     => 'client_credentials',
+            'client_secret' => $account->credential('client_secret'),
+            'grant_type' => 'client_credentials',
         ]);
 
         $token = $response->json('access_token');

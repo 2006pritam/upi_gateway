@@ -91,8 +91,8 @@ class PgProvidersTest extends TestCase
             'api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token' => Http::response(['access_token' => 'TOKEN1', 'expires_at' => time() + 3600, 'token_type' => 'O-Bearer']),
             'api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/pay' => Http::response(['orderId' => 'OMO1', 'state' => 'PENDING', 'expireAt' => (time() + 900) * 1000, 'redirectUrl' => 'https://mercury-uat.phonepe.com/transact/uat_v2?token=abc']),
             "api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/order/{$orderNo}/status*" => Http::sequence()
-                ->push(['orderId' => 'OMO1', 'state' => 'PENDING', 'amount' => 49900])
-                ->push(['orderId' => 'OMO1', 'state' => 'COMPLETED', 'amount' => 49900, 'paymentDetails' => [
+                ->push(['orderId' => 'OMO1', 'merchantOrderId' => $orderNo, 'state' => 'PENDING', 'amount' => 49900])
+                ->push(['orderId' => 'OMO1', 'merchantOrderId' => $orderNo, 'state' => 'COMPLETED', 'amount' => 49900, 'paymentDetails' => [
                     ['transactionId' => 'OM123', 'paymentMode' => 'UPI_QR', 'amount' => 49900, 'state' => 'COMPLETED', 'rail' => ['type' => 'UPI', 'utr' => '512345678901']],
                 ]]),
         ]);
@@ -134,7 +134,7 @@ class PgProvidersTest extends TestCase
                 ->push(['access_token' => 'NEW', 'expires_at' => time() + 3600]),
             "*/checkout/v2/order/{$orderNo}/status*" => Http::sequence()
                 ->push(['message' => 'Unauthorized'], 401)
-                ->push(['state' => 'COMPLETED', 'amount' => 100]),
+                ->push(['state' => 'COMPLETED', 'merchantOrderId' => $orderNo, 'amount' => 100]),
         ]);
 
         $this->get("/pay/{$orderNo}/return");
@@ -151,6 +151,28 @@ class PgProvidersTest extends TestCase
         Http::fake(['*/v1/oauth/token' => Http::response(['error' => 'invalid_client'], 401)]);
 
         $this->post("/pay/{$orderNo}/start")->assertRedirect(route('pay.show', $orderNo))->assertSessionHasErrors('checkout');
+    }
+
+    public function test_provider_cannot_redirect_checkout_to_a_non_https_url(): void
+    {
+        $this->phonepeAccount();
+        $orderNo = $this->createOrder();
+
+        Http::fake([
+            '*/v1/oauth/token' => Http::response(['access_token' => 'TOKEN1', 'expires_at' => time() + 3600]),
+            '*/checkout/v2/pay' => Http::response([
+                'orderId' => 'OMO1',
+                'state' => 'PENDING',
+                'expireAt' => (time() + 900) * 1000,
+                'redirectUrl' => 'javascript:alert(1)',
+            ]),
+        ]);
+
+        $this->post("/pay/{$orderNo}/start")
+            ->assertRedirect(route('pay.show', $orderNo))
+            ->assertSessionHasErrors('checkout');
+
+        $this->assertNull(Order::where('order_no', $orderNo)->value('provider_checkout'));
     }
 
     public function test_paytm_pg_signed_flow_and_forged_callback_is_ignored(): void

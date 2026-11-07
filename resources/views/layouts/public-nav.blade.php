@@ -17,7 +17,7 @@
         </div>
     </div>
 </header>
-<script>
+<script nonce="{{ $csp_nonce }}">
     const hdr = document.getElementById('site-header');
     window.addEventListener('scroll', () => hdr.classList.toggle('shadow-sm', window.scrollY > 10), { passive: true });
 </script>

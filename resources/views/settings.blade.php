@@ -25,7 +25,7 @@
                 <label class="label">API secret</label>
                 <div class="flex gap-2">
                     <input id="secret" type="password" readonly value="{{ $user->api_secret }}" class="input font-mono bg-slate-50">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="const s=document.getElementById('secret'); s.type = s.type === 'password' ? 'text' : 'password'"><x-icon name="eye" class="w-4 h-4" /> Reveal</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-toggle-secret><x-icon name="eye" class="w-4 h-4" /> Reveal</button>
                     <x-copy :text="$user->api_secret" />
                 </div>
                 <p class="help">Also used to sign webhooks (HMAC-SHA256).</p>
@@ -33,9 +33,62 @@
             <div class="flex items-center justify-between gap-4 rounded-lg bg-red-50/60 ring-1 ring-red-100 px-4 py-3">
                 <div class="text-sm text-red-800"><b>Regenerate keys</b><div class="text-xs text-red-700/80">Old keys stop working immediately.</div></div>
                 <form method="POST" action="{{ route('settings.regenerate') }}">@csrf
-                    <button onclick="return confirm('Old keys will stop working immediately. Continue?')" class="btn btn-danger btn-sm"><x-icon name="refresh" class="w-4 h-4" /> Regenerate</button>
+                    <button data-confirm="Old keys will stop working immediately. Continue?" class="btn btn-danger btn-sm"><x-icon name="refresh" class="w-4 h-4" /> Regenerate</button>
                 </form>
             </div>
+        </div>
+    </section>
+
+    {{-- Sandbox --}}
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
+        <div>
+            <div class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold tracking-wide text-amber-800">SANDBOX · TEST ONLY</div>
+            <h2 class="mt-3 text-base font-semibold text-slate-900">Sandbox credentials</h2>
+            <p class="mt-1 text-sm text-slate-500">Create simulated payments without contacting Paytm, PhonePe, banks, or UPI providers.</p>
+        </div>
+        <div class="card p-6 lg:col-span-2 space-y-5 ring-amber-200">
+            @if ($user->sandbox_api_key)
+                <div>
+                    <label class="label">Sandbox API key</label>
+                    <div class="flex gap-2">
+                        <input readonly value="{{ $user->sandbox_api_key }}" class="input font-mono bg-amber-50">
+                        <x-copy :text="$user->sandbox_api_key" />
+                    </div>
+                </div>
+                @if (session('sandbox_api_secret_once_encrypted'))
+                    @php $sandboxSecretOnce = Crypt::decryptString(session('sandbox_api_secret_once_encrypted')); @endphp
+                    <div class="rounded-lg bg-amber-50 p-4 ring-1 ring-amber-300">
+                        <label class="label">Sandbox API secret · shown once</label>
+                        <div class="flex gap-2">
+                            <input readonly value="{{ $sandboxSecretOnce }}" class="input font-mono bg-white">
+                            <x-copy :text="$sandboxSecretOnce" />
+                        </div>
+                        <p class="mt-2 text-xs font-medium text-amber-800">Copy this now. It cannot be retrieved after leaving this page.</p>
+                    </div>
+                @else
+                    <p class="text-sm text-slate-500">The Sandbox secret is stored encrypted and cannot be displayed again. Regenerate it if lost.</p>
+                @endif
+                <div class="flex flex-wrap justify-end gap-2">
+                    <form method="POST" action="{{ route('settings.sandbox.revoke') }}">@csrf
+                        <button data-confirm="Revoke Sandbox credentials? Existing TEST integrations will stop working." class="btn btn-danger btn-sm">Revoke</button>
+                    </form>
+                    <form method="POST" action="{{ route('settings.sandbox.regenerate') }}">@csrf
+                        <button data-confirm="Regenerate Sandbox credentials? The old TEST credentials will stop working." class="btn btn-secondary btn-sm">Regenerate</button>
+                    </form>
+                </div>
+            @else
+                <p class="text-sm text-slate-600">No Sandbox credentials have been generated.</p>
+                <form method="POST" action="{{ route('settings.sandbox.regenerate') }}" class="flex justify-end">@csrf
+                    <button class="btn btn-primary">Generate Sandbox credentials</button>
+                </form>
+            @endif
+
+            <form method="POST" action="{{ route('settings.sandbox.webhook') }}" class="border-t border-slate-100 pt-5">
+                @csrf
+                <x-input name="sandbox_webhook_url" label="Sandbox webhook endpoint" type="url" :value="$user->sandbox_webhook_url" placeholder="https://sandbox.yoursite.com/webhook" class="font-mono"
+                    help="Must differ from the Live webhook URL. TEST events are signed only with the Sandbox secret." />
+                <div class="flex justify-end"><button class="btn btn-primary">Save Sandbox webhook</button></div>
+            </form>
         </div>
     </section>
 

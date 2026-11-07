@@ -1,9 +1,15 @@
 <?php
 
+use App\Http\Middleware\AuthenticateApiKey;
+use App\Http\Middleware\EnsureActive;
+use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\RedirectToInstall;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\AuthenticateSession;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,18 +20,24 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'admin'   => \App\Http\Middleware\EnsureAdmin::class,
-            'active'  => \App\Http\Middleware\EnsureActive::class,
-            'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,
+            'admin' => EnsureAdmin::class,
+            'active' => EnsureActive::class,
+            'api.key' => AuthenticateApiKey::class,
         ]);
 
         // AuthenticateSession invalidates sessions when the user's password hash
         // changes, covering password changes AND API-key regeneration (which
         // touches the password column to bump the hash seen by the middleware).
         // It must come AFTER StartSession and AFTER Auth middleware.
-        $middleware->web(append: [
-            \Illuminate\Session\Middleware\AuthenticateSession::class,
-            \App\Http\Middleware\SecurityHeaders::class,
+        $middleware->web(prepend: [
+            RedirectToInstall::class,
+        ], append: [
+            AuthenticateSession::class,
+            SecurityHeaders::class,
+        ]);
+
+        $middleware->api(prepend: [
+            RedirectToInstall::class,
         ]);
 
         $middleware->redirectUsersTo('/dashboard');

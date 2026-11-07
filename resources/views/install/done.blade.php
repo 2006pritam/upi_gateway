@@ -9,30 +9,30 @@
         </svg>
     </div>
 
-    <h1 class="mt-6 text-2xl font-bold text-slate-900">Installation Complete! 🎉</h1>
+    <h1 class="mt-6 text-2xl font-bold text-slate-900">Installation Complete</h1>
     <p class="mt-2 text-slate-500">Your UPI Gateway is ready to use.</p>
 
     <div class="mt-8 rounded-xl bg-slate-50 ring-1 ring-slate-200 divide-y divide-slate-200 text-sm text-left">
         <div class="flex items-center gap-3 px-4 py-3">
-            <span class="text-emerald-500">✅</span>
+            <x-icon name="check-circle" class="w-5 h-5 text-emerald-600" />
             <span class="text-slate-700">Database configured & migrated</span>
         </div>
         <div class="flex items-center gap-3 px-4 py-3">
-            <span class="text-emerald-500">✅</span>
+            <x-icon name="check-circle" class="w-5 h-5 text-emerald-600" />
             <span class="text-slate-700">Admin account created</span>
         </div>
         <div class="flex items-center gap-3 px-4 py-3">
-            <span class="text-emerald-500">✅</span>
+            <x-icon name="check-circle" class="w-5 h-5 text-emerald-600" />
             <span class="text-slate-700">Application ready</span>
         </div>
     </div>
 
-    <div class="mt-8 p-4 rounded-xl bg-amber-50 ring-1 ring-amber-200 text-sm text-amber-800 text-left">
-        ⚠️ For security, delete or restrict access to the <code class="font-mono bg-amber-100 px-1 rounded">/install</code> route in production.
+    <div class="mt-8 p-4 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 text-sm text-emerald-800 text-left">
+        Installer access is now disabled. Sign in with the administrator account you just created.
     </div>
 
     <a href="{{ route('login') }}" class="btn btn-primary w-full justify-center py-2.5 mt-6 text-base">
-        Go to Login →
+        Go to Login <x-icon name="arrow-right" class="w-4 h-4" />
     </a>
 </div>
 @endsection

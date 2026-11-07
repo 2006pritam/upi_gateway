@@ -63,10 +63,10 @@ class SafeUrl
         }
 
         $scheme = strtolower($parts['scheme'] ?? '');
-        $host   = $parts['host'] ?? '';
-        $port   = $parts['port'] ?? null;
-        $user   = $parts['user'] ?? null;
-        $pass   = $parts['pass'] ?? null;
+        $host = $parts['host'] ?? '';
+        $port = $parts['port'] ?? null;
+        $user = $parts['user'] ?? null;
+        $pass = $parts['pass'] ?? null;
 
         // Reject userinfo credentials.
         if ($user !== null || $pass !== null) {
@@ -306,6 +306,7 @@ class SafeUrl
             return false;
         }
         $long = ip2long($ip);
+
         // 100.64.0.0 = 1681915904, 100.127.255.255 = 1686110207
         return $long >= 1681915904 && $long <= 1686110207;
     }
@@ -316,6 +317,7 @@ class SafeUrl
         if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
             return false;
         }
+
         return (ip2long($ip) >> 24 & 0xFF) === 0;
     }
 
@@ -326,6 +328,7 @@ class SafeUrl
             return false;
         }
         $long = ip2long($ip);
+
         // 169.254.0.0 = 2851995648, 169.254.255.255 = 2852061183
         return $long >= 2851995648 && $long <= 2852061183;
     }
@@ -348,21 +351,21 @@ class SafeUrl
             return true;
         }
 
-        $firstByte  = ord($packed[0]);
+        $firstByte = ord($packed[0]);
         $secondByte = ord($packed[1]);
 
         // fc00::/7 → first byte has top 7 bits = 1111110x → 0xfc or 0xfd
-        if (($firstByte & 0xfe) === 0xfc) {
+        if (($firstByte & 0xFE) === 0xFC) {
             return true;
         }
 
         // fe80::/10 → first 10 bits = 1111111010 → 0xfe, second byte & 0xc0 = 0x80
-        if ($firstByte === 0xfe && ($secondByte & 0xc0) === 0x80) {
+        if ($firstByte === 0xFE && ($secondByte & 0xC0) === 0x80) {
             return true;
         }
 
         // ff00::/8 multicast
-        if ($firstByte === 0xff) {
+        if ($firstByte === 0xFF) {
             return true;
         }
 
@@ -377,9 +380,9 @@ class SafeUrl
     // ── Helper ────────────────────────────────────────────────────────────────
 
     /**
-     * @throws ValidationException
-     *
      * @return never
+     *
+     * @throws ValidationException
      */
     private function fail(string $field, string $message): void
     {

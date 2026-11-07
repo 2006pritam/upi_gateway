@@ -21,7 +21,7 @@
             @foreach ($providers as $key => $provider)
                 @php [$title, $desc, $icon, $badge] = $meta[$key] ?? [$provider['label'], '', 'qr', null]; @endphp
                 <label class="relative flex gap-3 cursor-pointer rounded-xl p-4 ring-1 ring-slate-200 hover:ring-slate-300 has-[:checked]:ring-2 has-[:checked]:ring-brand-600 has-[:checked]:bg-brand-50/40 transition">
-                    <input type="radio" name="provider" value="{{ $key }}" class="sr-only peer" @checked($selected === $key) onchange="syncProvider()">
+                    <input type="radio" name="provider" value="{{ $key }}" class="sr-only peer" @checked($selected === $key) data-provider-choice>
                     <span class="grid place-items-center w-10 h-10 rounded-lg bg-white ring-1 ring-slate-200 text-slate-600 peer-checked:text-brand-600 shrink-0"><x-icon :name="$icon" class="w-5 h-5" /></span>
                     <span>
                         <span class="flex items-center gap-2 text-sm font-semibold text-slate-900">{{ $title }}
@@ -116,7 +116,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ $csp_nonce }}">
     function syncProvider() {
         const provider = document.querySelector('input[name=provider]:checked')?.value;
         document.querySelectorAll('[data-for]').forEach(el => {
@@ -126,6 +126,7 @@
             el.querySelectorAll('input:not([type=radio])').forEach(i => i.disabled = !show);
         });
     }
+    document.querySelectorAll('[data-provider-choice]').forEach(el => el.addEventListener('change', syncProvider));
     syncProvider();
 </script>
 @endpush

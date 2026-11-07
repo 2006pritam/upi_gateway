@@ -22,7 +22,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => ['required', 'email'],
+            'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
 
@@ -38,6 +38,7 @@ class AuthController extends Controller
         $rateLimitKey = $this->rateLimitKey($request);
         if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
             event(new Lockout($request));
+
             return back()
                 ->withErrors(['email' => 'Too many login attempts. Please try again in a moment.'])
                 ->onlyInput('email');
@@ -59,6 +60,7 @@ class AuthController extends Controller
 
         if (! Auth::user()->is_active) {
             Auth::logout();
+
             return back()
                 ->withErrors(['email' => 'Your account has been disabled.'])
                 ->onlyInput('email');
@@ -83,11 +85,11 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $data = $request->validate([
-            'name'          => ['required', 'string', 'max:100'],
+            'name' => ['required', 'string', 'max:100'],
             'business_name' => ['required', 'string', 'max:100'],
-            'email'         => ['required', 'email', 'max:255', 'unique:users'],
-            'phone'         => ['nullable', 'string', 'max:20'],
-            'password'      => ['required', 'confirmed', $this->passwordRule()],
+            'email' => ['required', 'email', 'max:255', 'unique:users'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'password' => ['required', 'confirmed', $this->passwordRule()],
         ]);
 
         $user = User::create($data + ['role' => 'merchant']);
@@ -121,6 +123,7 @@ class AuthController extends Controller
         if (app()->isProduction()) {
             $rule = $rule->uncompromised();
         }
+
         return $rule;
     }
 

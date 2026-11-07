@@ -43,7 +43,7 @@
                         <td class="td text-slate-500 whitespace-nowrap">{{ $merchant->created_at->format('d M Y') }}</td>
                         <td class="td text-right">
                             <form method="POST" action="{{ route('admin.merchants.toggle', $merchant) }}">@csrf
-                                <button onclick="return confirm('{{ $merchant->is_active ? 'Disable' : 'Enable' }} {{ e($merchant->displayName()) }}?')" class="btn btn-sm {{ $merchant->is_active ? 'btn-danger' : 'btn-secondary' }}">
+                                <button data-confirm="{{ $merchant->is_active ? 'Disable' : 'Enable' }} {{ $merchant->displayName() }}?" class="btn btn-sm {{ $merchant->is_active ? 'btn-danger' : 'btn-secondary' }}">
                                     {{ $merchant->is_active ? 'Disable' : 'Enable' }}
                                 </button>
                             </form>

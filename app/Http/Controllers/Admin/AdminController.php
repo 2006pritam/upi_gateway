@@ -13,8 +13,13 @@ class AdminController extends Controller
     public function merchants()
     {
         $merchants = User::where('role', 'merchant')
-            ->withCount(['orders', 'orders as paid_orders_count' => fn ($q) => $q->where('status', Order::PAID)])
-            ->withSum(['orders as paid_amount' => fn ($q) => $q->where('status', Order::PAID)], 'amount')
+            ->withCount([
+                'orders' => fn ($q) => $q->where('environment', Order::LIVE),
+                'orders as paid_orders_count' => fn ($q) => $q
+                    ->where('environment', Order::LIVE)->where('status', Order::PAID),
+            ])
+            ->withSum(['orders as paid_amount' => fn ($q) => $q
+                ->where('environment', Order::LIVE)->where('status', Order::PAID)], 'amount')
             ->latest()
             ->paginate(25);
 
@@ -29,12 +34,12 @@ class AdminController extends Controller
 
         // Audit log
         AdminAuditLog::create([
-            'admin_id'     => $request->user()->id,
-            'action'       => $user->is_active ? 'merchant_enabled' : 'merchant_disabled',
+            'admin_id' => $request->user()->id,
+            'action' => $user->is_active ? 'merchant_enabled' : 'merchant_disabled',
             'subject_type' => 'user',
-            'subject_id'   => $user->id,
-            'meta'         => ['email' => $user->email],
-            'ip'           => $request->ip(),
+            'subject_id' => $user->id,
+            'meta' => ['email' => $user->email],
+            'ip' => $request->ip(),
         ]);
 
         return back()->with('status', "{$user->displayName()} ".($user->is_active ? 'enabled.' : 'disabled.'));
@@ -58,16 +63,16 @@ class AdminController extends Controller
     public function showOrder(Request $request, Order $order)
     {
         AdminAuditLog::create([
-            'admin_id'     => $request->user()->id,
-            'action'       => 'order_viewed',
+            'admin_id' => $request->user()->id,
+            'action' => 'order_viewed',
             'subject_type' => 'order',
-            'subject_id'   => $order->id,
-            'meta'         => ['order_no' => $order->order_no, 'merchant_id' => $order->user_id],
-            'ip'           => $request->ip(),
+            'subject_id' => $order->id,
+            'meta' => ['order_no' => $order->order_no, 'merchant_id' => $order->user_id],
+            'ip' => $request->ip(),
         ]);
 
         return view('orders.show', [
-            'order'    => $order->load('paymentAccount', 'webhookLogs', 'user'),
+            'order' => $order->load('paymentAccount', 'webhookLogs', 'user'),
             'readOnly' => true,
         ]);
     }

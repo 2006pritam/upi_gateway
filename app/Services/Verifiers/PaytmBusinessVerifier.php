@@ -29,7 +29,7 @@ class PaytmBusinessVerifier implements Verifier
         } catch (Throwable $e) {
             Log::warning('Paytm status check failed', [
                 'order_id' => $order->order_no,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
                 // Never log $mid, credentials, or full response here.
             ]);
 
@@ -40,13 +40,24 @@ class PaytmBusinessVerifier implements Verifier
             return VerificationResult::pending($data);
         }
 
+        // Verify the order ID in the response matches our order to prevent
+        // a response for a different order being accepted.
+        if (($data['ORDERID'] ?? null) !== $order->order_no) {
+            Log::warning('Paytm Business order ID mismatch', [
+                'order_id' => $order->order_no,
+                'response_id' => $data['ORDERID'] ?? null,
+            ]);
+
+            return VerificationResult::pending(['error' => 'Order ID mismatch']);
+        }
+
         // Never trust status alone: the amount paid must match the order exactly.
         if ($this->toPaise($data['TXNAMOUNT'] ?? 0) !== $this->toPaise($order->amount)) {
             Log::warning('Paytm amount mismatch', [
-                'order_id'       => $order->order_no,
+                'order_id' => $order->order_no,
                 'expected_paise' => $this->toPaise($order->amount),
-                'got_paise'      => $this->toPaise($data['TXNAMOUNT'] ?? 0),
-                'status'         => $data['STATUS'] ?? null,
+                'got_paise' => $this->toPaise($data['TXNAMOUNT'] ?? 0),
+                'status' => $data['STATUS'] ?? null,
                 // Omit full provider response — may contain PII or credentials.
             ]);
 
@@ -54,9 +65,9 @@ class PaytmBusinessVerifier implements Verifier
         }
 
         return VerificationResult::paid(
-            utr:   $data['BANKTXNID'] ?? null,
+            utr: $data['BANKTXNID'] ?? null,
             txnId: $data['TXNID'] ?? null,
-            raw:   $data,
+            raw: $data,
         );
     }
 

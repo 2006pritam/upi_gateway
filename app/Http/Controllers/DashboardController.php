@@ -10,34 +10,63 @@ class DashboardController extends Controller
     public function __invoke(Request $request)
     {
         $user = $request->user();
-        $orders = $user->orders();
-        $paid = fn () => (clone $orders)->where('status', Order::PAID);
+        $environment = $request->query('environment') === Order::SANDBOX ? Order::SANDBOX : Order::LIVE;
+        $orders = fn () => $user->orders()->where('environment', $environment);
 
-        $closedCount = (clone $orders)->whereIn('status', [Order::PAID, Order::EXPIRED])->count();
-        $paidCount = $paid()->count();
+        // ── Single query for all status-based stats ───────────────────────────
+        // Replaces 7 separate COUNT/SUM calls with one grouped aggregation.
+        $agg = $orders()
+            ->selectRaw("SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_count,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
+                SUM(CASE WHEN status = 'review' THEN 1 ELSE 0 END) AS review_count,
+                SUM(CASE WHEN status IN ('paid', 'expired', 'failed') THEN 1 ELSE 0 END) AS closed_count,
+                COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) AS total_amount,
+                COALESCE(SUM(CASE WHEN status = 'paid' AND paid_at >= ? THEN amount ELSE 0 END), 0) AS today_amount,
+                SUM(CASE WHEN status = 'paid' AND paid_at >= ? THEN 1 ELSE 0 END) AS today_count",
+                [today()->startOfDay(), today()->startOfDay()])
+            ->first();
+
+        $paidCount = (int) $agg->paid_count;
+        $closedCount = (int) $agg->closed_count;
 
         $stats = [
-            'today_amount' => $paid()->where('paid_at', '>=', today())->sum('amount'),
-            'today_count' => $paid()->where('paid_at', '>=', today())->count(),
-            'total_amount' => $paid()->sum('amount'),
+            'today_amount' => (float) $agg->today_amount,
+            'today_count' => (int) $agg->today_count,
+            'total_amount' => (float) $agg->total_amount,
             'paid_count' => $paidCount,
-            'pending_count' => (clone $orders)->where('status', Order::PENDING)->count(),
-            'review_count' => (clone $orders)->where('status', Order::REVIEW)->count(),
-            'success_rate' => $closedCount ? round($paidCount / $closedCount * 100) : null,
+            'pending_count' => (int) $agg->pending_count,
+            'review_count' => (int) $agg->review_count,
+            'success_rate' => $closedCount ? (int) round($paidCount / $closedCount * 100) : null,
         ];
 
-        // Last 7 days of collections, grouped in PHP so it works on any database.
+        // ── Single query for the 7-day chart, grouped in the DB ───────────────
+        // Replaces loading all paid rows into PHP memory and grouping there.
         $since = today()->subDays(6);
-        $byDay = $paid()->where('paid_at', '>=', $since)->get(['amount', 'paid_at'])
-            ->groupBy(fn ($o) => $o->paid_at->toDateString());
-        $chart = collect(range(0, 6))->map(function ($i) use ($since, $byDay) {
-            $day = $since->copy()->addDays($i);
-            $rows = $byDay->get($day->toDateString(), collect());
 
-            return ['label' => $day->format('D'), 'date' => $day->format('d M'), 'amount' => (float) $rows->sum('amount'), 'count' => $rows->count()];
+        $byDay = $orders()
+            ->where('status', Order::PAID)
+            ->where('paid_at', '>=', $since)
+            ->selectRaw('DATE(paid_at) AS day, COUNT(*) AS cnt, COALESCE(SUM(amount), 0) AS total')
+            ->groupBy('day')
+            ->get()
+            ->keyBy('day');
+
+        $chart = collect(range(0, 6))->map(function ($i) use ($since, $byDay) {
+            $day = $since->copy()->addDays($i)->toDateString();
+
+            return [
+                'label' => $since->copy()->addDays($i)->format('D'),
+                'date' => $since->copy()->addDays($i)->format('d M'),
+                'amount' => (float) ($byDay->get($day)?->total ?? 0),
+                'count' => (int) ($byDay->get($day)?->cnt ?? 0),
+            ];
         });
 
-        $checklist = [
+        $checklist = $environment === Order::SANDBOX ? [
+            ['Generate Sandbox credentials', (bool) $user->sandbox_api_key, route('settings')],
+            ['Set up Sandbox webhook URL', (bool) $user->sandbox_webhook_url, route('settings')],
+            ['Create your first TEST payment', $user->orders()->where('environment', Order::SANDBOX)->exists(), route('docs')],
+        ] : [
             ['Create your merchant account', true, null],
             ['Add a UPI account', $user->paymentAccounts()->exists(), route('accounts.create')],
             ['Set up your webhook URL', (bool) $user->webhook_url, route('settings')],
@@ -49,7 +78,8 @@ class DashboardController extends Controller
             'chart' => $chart,
             'weekTotal' => $chart->sum('amount'),
             'checklist' => $checklist,
-            'recentOrders' => (clone $orders)->latest()->limit(6)->get(),
+            'recentOrders' => $orders()->with('paymentAccount')->latest()->limit(6)->get(),
+            'environment' => $environment,
         ]);
     }
 }

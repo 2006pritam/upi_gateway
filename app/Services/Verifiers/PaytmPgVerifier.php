@@ -19,26 +19,26 @@ class PaytmPgVerifier implements HostedCheckout, Verifier
     public function startCheckout(Order $order, string $returnUrl): array
     {
         $account = $order->paymentAccount;
-        $mid     = $account->credential('mid');
-        $base    = $this->baseUrl($account);
+        $mid = $account->credential('mid');
+        $base = $this->baseUrl($account);
 
         $response = $this->signedPost(
             $account,
             "$base/theia/api/v1/initiateTransaction?".http_build_query(['mid' => $mid, 'orderId' => $order->order_no]),
             [
                 'requestType' => 'Payment',
-                'mid'         => $mid,
+                'mid' => $mid,
                 'websiteName' => $account->credential('website_name') ?: 'DEFAULT',
-                'orderId'     => $order->order_no,
+                'orderId' => $order->order_no,
                 'callbackUrl' => $returnUrl,
-                'txnAmount'   => [
-                    'value'    => number_format((float) $order->amount, 2, '.', ''),
+                'txnAmount' => [
+                    'value' => number_format((float) $order->amount, 2, '.', ''),
                     'currency' => 'INR',
                 ],
                 'userInfo' => array_filter([
                     'custId' => 'CUST'.$order->user_id.'X'.$order->id,
                     'mobile' => $order->customer_mobile,
-                    'email'  => $order->customer_email,
+                    'email' => $order->customer_email,
                 ]),
             ]
         );
@@ -48,21 +48,18 @@ class PaytmPgVerifier implements HostedCheckout, Verifier
         if ($response->json('body.resultInfo.resultStatus') !== 'S' || ! $token) {
             // Log only safe fields — never log merchant_key or full body.
             Log::warning('Paytm initiate transaction failed', [
-                'order_id'    => $order->order_no,
+                'order_id' => $order->order_no,
                 'result_code' => $response->json('body.resultInfo.resultCode'),
-                'result_msg'  => $response->json('body.resultInfo.resultMsg'),
+                'result_msg' => $response->json('body.resultInfo.resultMsg'),
             ]);
 
-            throw new RuntimeException(
-                'Paytm could not start the payment: '
-                .($response->json('body.resultInfo.resultMsg') ?? 'HTTP '.$response->status())
-            );
+            throw new RuntimeException('Paytm could not start the payment. Please try again.');
         }
 
         return [
-            'type'       => 'form',
-            'url'        => "$base/theia/api/v1/showPaymentPage?".http_build_query(['mid' => $mid, 'orderId' => $order->order_no]),
-            'fields'     => ['mid' => $mid, 'orderId' => $order->order_no, 'txnToken' => $token],
+            'type' => 'form',
+            'url' => "$base/theia/api/v1/showPaymentPage?".http_build_query(['mid' => $mid, 'orderId' => $order->order_no]),
+            'fields' => ['mid' => $mid, 'orderId' => $order->order_no, 'txnToken' => $token],
             'expires_at' => now()->addMinutes(14)->timestamp,
         ];
     }
@@ -73,7 +70,7 @@ class PaytmPgVerifier implements HostedCheckout, Verifier
 
         try {
             $response = $this->signedPost($account, $this->baseUrl($account).'/v3/order/status', [
-                'mid'     => $account->credential('mid'),
+                'mid' => $account->credential('mid'),
                 'orderId' => $order->order_no,
             ]);
         } catch (Throwable $e) {
@@ -86,11 +83,21 @@ class PaytmPgVerifier implements HostedCheckout, Verifier
             return VerificationResult::pending($body);
         }
 
+        // Verify the order ID in the response matches our order.
+        if (($body['orderId'] ?? null) !== $order->order_no) {
+            Log::warning('Paytm PG order ID mismatch', [
+                'order_id' => $order->order_no,
+                'response_id' => $body['orderId'] ?? null,
+            ]);
+
+            return VerificationResult::pending(['error' => 'Order ID mismatch']);
+        }
+
         if ($this->toPaise($body['txnAmount'] ?? 0) !== $this->toPaise($order->amount)) {
             Log::warning('Paytm PG amount mismatch', [
-                'order_id'       => $order->order_no,
+                'order_id' => $order->order_no,
                 'expected_paise' => $this->toPaise($order->amount),
-                'got_paise'      => $this->toPaise($body['txnAmount'] ?? 0),
+                'got_paise' => $this->toPaise($body['txnAmount'] ?? 0),
                 // Do NOT log $body — may contain customer PII or payment details.
             ]);
 
@@ -98,9 +105,9 @@ class PaytmPgVerifier implements HostedCheckout, Verifier
         }
 
         return VerificationResult::paid(
-            utr:   $body['bankTxnId'] ?? null,
+            utr: $body['bankTxnId'] ?? null,
             txnId: $body['txnId'] ?? null,
-            raw:   $body,
+            raw: $body,
         );
     }
 
@@ -110,9 +117,9 @@ class PaytmPgVerifier implements HostedCheckout, Verifier
      */
     private function signedPost(PaymentAccount $account, string $url, array $body): Response
     {
-        $bodyJson  = json_encode($body, JSON_UNESCAPED_SLASHES);
+        $bodyJson = json_encode($body, JSON_UNESCAPED_SLASHES);
         $signature = PaytmChecksum::generate($bodyJson, (string) $account->credential('merchant_key'));
-        $payload   = '{"body":'.$bodyJson.',"head":{"signature":'.json_encode($signature).'}}';
+        $payload = '{"body":'.$bodyJson.',"head":{"signature":'.json_encode($signature).'}}';
 
         return Http::timeout(15)->acceptJson()->withBody($payload, 'application/json')->post($url);
     }

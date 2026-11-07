@@ -18,17 +18,14 @@
         <input type="url" name="app_url" value="{{ old('app_url', 'http://localhost') }}" class="input" placeholder="https://yourdomain.com" required>
     </div>
 
-    <div>
-        <label class="label">Database Type</label>
-        <select name="db_connection" id="db_connection" class="input" onchange="toggleMysql(this.value)">
-            <option value="sqlite" {{ old('db_connection') === 'mysql' ? '' : 'selected' }}>SQLite (recommended for local)</option>
-            <option value="mysql" {{ old('db_connection') === 'mysql' ? 'selected' : '' }}>MySQL (recommended for production)</option>
-        </select>
+    <input type="hidden" name="db_connection" value="mysql">
+    <div class="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-200">
+        MySQL is required. Enter the credentials for your application database.
     </div>
 
-    <div id="mysql_fields" class="{{ old('db_connection') === 'mysql' ? '' : 'hidden' }} space-y-4">
-        <div class="grid grid-cols-3 gap-3">
-            <div class="col-span-2">
+    <div id="mysql_fields" class="space-y-4">
+        <div class="grid gap-3 sm:grid-cols-3">
+            <div class="sm:col-span-2">
                 <label class="label">Host</label>
                 <input type="text" name="db_host" value="{{ old('db_host', '127.0.0.1') }}" class="input" placeholder="127.0.0.1">
             </div>
@@ -41,7 +38,7 @@
             <label class="label">Database Name</label>
             <input type="text" name="db_database" value="{{ old('db_database', 'upi_gateway') }}" class="input" placeholder="upi_gateway">
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid gap-3 sm:grid-cols-2">
             <div>
                 <label class="label">Username</label>
                 <input type="text" name="db_username" value="{{ old('db_username', 'root') }}" class="input">
@@ -53,9 +50,6 @@
         </div>
     </div>
 
-    {{-- SQLite hidden db_database --}}
-    <input type="hidden" name="db_database" value="database/database.sqlite" id="sqlite_db">
-
     @if ($errors->any())
         <div class="rounded-lg bg-red-50 ring-1 ring-red-200 px-4 py-3 text-sm text-red-700">
             {{ $errors->first() }}
@@ -63,17 +57,7 @@
     @endif
 
     <button type="submit" class="btn btn-primary w-full justify-center py-2.5">
-        Test Connection & Continue →
+        Test connection and continue <x-icon name="arrow-right" class="w-4 h-4" />
     </button>
 </form>
 @endsection
-
-@push('scripts')
-<script>
-function toggleMysql(val) {
-    document.getElementById('mysql_fields').classList.toggle('hidden', val !== 'mysql');
-    document.getElementById('sqlite_db').disabled = val === 'mysql';
-}
-toggleMysql(document.getElementById('db_connection').value);
-</script>
-@endpush

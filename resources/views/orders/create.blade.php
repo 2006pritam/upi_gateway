@@ -18,8 +18,7 @@
             <label for="f-amount" class="label">Amount</label>
             <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-semibold text-slate-400">₹</span>
-                <input id="f-amount" type="number" name="amount" step="0.01" min="1" max="100000" value="{{ old('amount') }}" required autofocus
-                    oninput="document.getElementById('preview-amount').textContent = '₹' + (parseFloat(this.value || 0)).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})"
+                <input id="f-amount" type="number" name="amount" step="0.01" min="1" max="100000" value="{{ old('amount') }}" required autofocus data-amount-preview
                     class="input pl-10 py-3 text-2xl font-semibold" placeholder="0.00">
             </div>
             <p class="help">Between ₹1 and ₹1,00,000.</p>

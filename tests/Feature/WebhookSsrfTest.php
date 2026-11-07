@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -57,6 +58,7 @@ class WebhookSsrfTest extends TestCase
         if ($webhookUrl) {
             $user->forceFill(['webhook_url' => $webhookUrl])->save();
         }
+
         return $user;
     }
 
@@ -70,7 +72,7 @@ class WebhookSsrfTest extends TestCase
 
     // ── 1. SettingsController rejects bad URLs at save time ───────────────────
 
-    /** @dataProvider badWebhookUrls */
+    #[DataProvider('badWebhookUrls')]
     public function test_bad_webhook_url_is_rejected_at_save(string $url, string $description): void
     {
         // Use a resolver that routes any hostname to a private IP so that
@@ -89,15 +91,15 @@ class WebhookSsrfTest extends TestCase
     public static function badWebhookUrls(): array
     {
         return [
-            'loopback IPv4'              => ['http://127.0.0.1/x',                           'loopback IPv4'],
-            'localhost hostname'         => ['http://localhost',                               'localhost hostname'],
-            'EC2 metadata'               => ['http://169.254.169.254/latest/meta-data',       'EC2 metadata link-local'],
-            'IPv6 loopback'              => ['http://[::1]/',                                  'IPv6 loopback literal'],
-            'private 10.x'               => ['http://10.0.0.5',                               'private 10.x IPv4'],
-            'private 192.168.x'          => ['http://192.168.1.1',                            'private 192.168.x IPv4'],
-            'decimal integer IP'         => ['http://2130706433',                             'decimal integer 127.0.0.1'],
-            'userinfo in URL'            => ['https://user:pass@example.com',                 'credentials in URL'],
-            'ftp scheme'                 => ['ftp://example.com',                             'non-http(s) scheme'],
+            'loopback IPv4' => ['http://127.0.0.1/x',                           'loopback IPv4'],
+            'localhost hostname' => ['http://localhost',                               'localhost hostname'],
+            'EC2 metadata' => ['http://169.254.169.254/latest/meta-data',       'EC2 metadata link-local'],
+            'IPv6 loopback' => ['http://[::1]/',                                  'IPv6 loopback literal'],
+            'private 10.x' => ['http://10.0.0.5',                               'private 10.x IPv4'],
+            'private 192.168.x' => ['http://192.168.1.1',                            'private 192.168.x IPv4'],
+            'decimal integer IP' => ['http://2130706433',                             'decimal integer 127.0.0.1'],
+            'userinfo in URL' => ['https://user:pass@example.com',                 'credentials in URL'],
+            'ftp scheme' => ['ftp://example.com',                             'non-http(s) scheme'],
         ];
     }
 
@@ -148,7 +150,7 @@ class WebhookSsrfTest extends TestCase
 
         Http::fake();  // no real requests should be made
 
-        $user  = $this->merchant('https://example.com/hook');
+        $user = $this->merchant('https://example.com/hook');
         $order = $this->order($user);
 
         (new SendWebhook($order, 'order.paid'))->handle();
@@ -175,7 +177,7 @@ class WebhookSsrfTest extends TestCase
             'example.com/*' => Http::response('', 302, ['Location' => 'http://169.254.169.254/latest']),
         ]);
 
-        $user  = $this->merchant('https://example.com/hook');
+        $user = $this->merchant('https://example.com/hook');
         $order = $this->order($user);
 
         // A 302 is a non-2xx failure, so handle() throws to trigger the queue
@@ -207,7 +209,7 @@ class WebhookSsrfTest extends TestCase
             'example.com/*' => Http::response('SENSITIVE-INTERNAL-DATA', 200),
         ]);
 
-        $user  = $this->merchant('https://example.com/hook');
+        $user = $this->merchant('https://example.com/hook');
         $order = $this->order($user);
 
         (new SendWebhook($order, 'order.paid'))->handle();
@@ -223,7 +225,7 @@ class WebhookSsrfTest extends TestCase
 
         Http::fake();
 
-        $user  = $this->merchant('https://example.com/hook');
+        $user = $this->merchant('https://example.com/hook');
         $order = $this->order($user);
 
         (new SendWebhook($order, 'order.paid'))->handle();
@@ -240,7 +242,7 @@ class WebhookSsrfTest extends TestCase
 
         Http::fake();
 
-        $user  = $this->merchant('https://example.com/hook');
+        $user = $this->merchant('https://example.com/hook');
         $order = $this->order($user);
 
         // handle() must return without throwing — so the queue won't retry.
@@ -266,14 +268,13 @@ class WebhookSsrfTest extends TestCase
         // Default resolver (from TestCase::setUp) returns 93.184.216.34 for any host.
         Http::fake(['merchant.test/*' => Http::response('ok', 200)]);
 
-        $user  = $this->merchant('https://merchant.test/hook');
+        $user = $this->merchant('https://merchant.test/hook');
         $order = $this->order($user);
 
         (new SendWebhook($order, 'order.paid'))->handle();
 
         // Webhook request must be signed correctly.
-        Http::assertSent(fn (HttpRequest $r) =>
-            $r->url() === 'https://merchant.test/hook'
+        Http::assertSent(fn (HttpRequest $r) => $r->url() === 'https://merchant.test/hook'
             && $r->header('X-Signature')[0] === hash_hmac('sha256', $r->body(), $user->api_secret)
             && $r['event'] === 'order.paid'
         );

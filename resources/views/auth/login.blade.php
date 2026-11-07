@@ -7,11 +7,11 @@
     @csrf
     <div class="mb-5">
         <label for="f-email" class="label">Email</label>
-        <input id="f-email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="email" class="input py-2.5" placeholder="you@business.com">
+        <input id="f-email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="email" @class(['input py-2.5', 'ring-red-400 focus:ring-red-500' => $errors->has('email')]) placeholder="you@business.com">
     </div>
     <div class="mb-5">
         <label for="f-password" class="label">Password</label>
-        <input id="f-password" type="password" name="password" required autocomplete="current-password" class="input py-2.5" placeholder="••••••••">
+        <input id="f-password" type="password" name="password" required autocomplete="current-password" @class(['input py-2.5', 'ring-red-400 focus:ring-red-500' => $errors->has('password')]) placeholder="••••••••">
     </div>
     <label class="flex items-center gap-2 text-sm text-slate-600 mb-6">
         <input type="checkbox" name="remember" class="rounded border-slate-300 text-brand-600 focus:ring-brand-600"> Keep me logged in
