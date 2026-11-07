@@ -32,10 +32,11 @@ class InstallationWizardTest extends TestCase
         $this->get(route('install.index'))
             ->assertOk()
             ->assertSee('Server Requirements')
-            ->assertSee('PDO MySQL (required)')
+            ->assertSee('PDO MySQL or PostgreSQL (required)')
             ->assertDontSee('PDO SQLite');
         $this->get(route('install.database'))->assertOk()
-            ->assertSee('MySQL is required')
+            ->assertSee('MySQL or PostgreSQL is required')
+            ->assertSee('PostgreSQL')
             ->assertDontSee('SQLite');
     }
 
@@ -160,8 +161,84 @@ class InstallationWizardTest extends TestCase
             ->assertSessionHasErrors('db_connection');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Only MySQL is supported');
+        $this->expectExceptionMessage('Only MySQL and PostgreSQL are supported');
         app(InstallationManager::class)->configureDatabase(['db_connection' => 'sqlite']);
+    }
+
+    public function test_postgresql_is_accepted_and_defaults_to_its_own_port(): void
+    {
+        $installer = Mockery::mock(InstallationManager::class)->makePartial();
+        $installer->shouldReceive('testDatabaseConnection')
+            ->once()
+            ->withArgs(fn (array $data) => $data['db_connection'] === 'pgsql' && $data['db_port'] === 5432)
+            ->andThrow(new RuntimeException('stop after validation'));
+        $this->app->instance(InstallationManager::class, $installer);
+
+        $this->withoutMiddleware(RedirectIfInstalled::class)
+            ->from(route('install.database'))
+            ->post(route('install.database.save'), [
+                'db_connection' => 'pgsql',
+                'db_host' => 'db.example.neon.tech',
+                'db_database' => 'neondb',
+                'db_username' => 'gateway',
+                'db_password' => 'secret',
+                'app_url' => 'https://gateway.example',
+                'app_name' => 'Gateway',
+            ])
+            ->assertSessionHasErrors('db_host')
+            ->assertSessionDoesntHaveErrors('db_connection');
+    }
+
+    public function test_postgresql_configuration_targets_the_pgsql_connection(): void
+    {
+        $original = [config('database.default'), config('database.connections.pgsql')];
+
+        try {
+            app(InstallationManager::class)->configureDatabase([
+                'db_connection' => 'pgsql',
+                'db_host' => 'db.example.neon.tech',
+                'db_port' => 5432,
+                'db_database' => 'neondb',
+                'db_username' => 'gateway',
+                'db_password' => 'secret',
+            ]);
+
+            $this->assertSame('pgsql', config('database.default'));
+            $this->assertSame('db.example.neon.tech', config('database.connections.pgsql.host'));
+            $this->assertSame('neondb', config('database.connections.pgsql.database'));
+        } finally {
+            config(['database.default' => $original[0], 'database.connections.pgsql' => $original[1]]);
+            DB::purge('pgsql');
+        }
+    }
+
+    public function test_postgresql_environment_defaults_to_port_5432(): void
+    {
+        $envPath = tempnam(sys_get_temp_dir(), 'gateway-env-');
+        $original = [config('app.env'), config('app.key'), config('app.debug'), config('app.url'), config('session.secure')];
+        config(['installer.env_path' => $envPath]);
+
+        try {
+            app(InstallationManager::class)->writeEnvironment([
+                'db_connection' => 'pgsql',
+                'db_host' => 'db.example.neon.tech',
+                'db_database' => 'neondb',
+                'db_username' => 'gateway',
+                'db_password' => '',
+                'app_url' => 'https://gateway.example',
+                'app_name' => 'Gateway',
+            ]);
+
+            $env = file_get_contents($envPath);
+            $this->assertStringContainsString('DB_CONNECTION=pgsql', $env);
+            $this->assertStringContainsString('DB_PORT=5432', $env);
+        } finally {
+            config([
+                'app.env' => $original[0], 'app.key' => $original[1], 'app.debug' => $original[2],
+                'app.url' => $original[3], 'session.secure' => $original[4],
+            ]);
+            @unlink($envPath);
+        }
     }
 
     public function test_migration_failure_is_safe_and_can_be_retried(): void

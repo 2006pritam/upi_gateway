@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Throwable;
 
@@ -31,15 +32,17 @@ class InstallController extends Controller
     public function databaseSave(Request $request)
     {
         $data = $request->validate([
-            'db_connection' => 'required|in:mysql',
+            'db_connection' => ['required', Rule::in(InstallationManager::SUPPORTED_DRIVERS)],
             'db_host' => ['required', 'string', 'max:255', 'not_regex:/[\r\n]/'],
-            'db_port' => ['required', 'integer', 'between:1,65535'],
+            'db_port' => ['nullable', 'integer', 'between:1,65535'],
             'db_database' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_$-]+$/'],
             'db_username' => ['required', 'string', 'max:128', 'not_regex:/[\r\n]/'],
             'db_password' => ['nullable', 'string', 'max:512', 'not_regex:/[\r\n]/'],
             'app_url' => ['required', 'url:http,https', 'max:500'],
             'app_name' => ['required', 'string', 'max:100', 'not_regex:/[\r\n]/'],
         ]);
+
+        $data['db_port'] ??= InstallationManager::defaultPort($data['db_connection']);
 
         try {
             $this->installer->testDatabaseConnection($data);
@@ -203,7 +206,7 @@ class InstallController extends Controller
         return [
             ['name' => 'PHP >= 8.2',         'pass' => version_compare(PHP_VERSION, '8.2.0', '>=')],
             ['name' => 'PDO Extension',       'pass' => extension_loaded('pdo')],
-            ['name' => 'PDO MySQL (required)', 'pass' => extension_loaded('pdo_mysql')],
+            ['name' => 'PDO MySQL or PostgreSQL (required)', 'pass' => extension_loaded('pdo_mysql') || extension_loaded('pdo_pgsql')],
             ['name' => 'OpenSSL Extension',   'pass' => extension_loaded('openssl')],
             ['name' => 'Mbstring Extension',  'pass' => extension_loaded('mbstring')],
             ['name' => 'Tokenizer Extension', 'pass' => extension_loaded('tokenizer')],
