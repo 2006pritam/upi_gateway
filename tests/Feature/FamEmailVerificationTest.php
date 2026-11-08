@@ -88,6 +88,31 @@ class FamEmailVerificationTest extends TestCase
         Queue::assertPushed(SendWebhook::class, fn ($j) => $j->event === 'order.paid');
     }
 
+    public function test_legacy_latin1_signature_from_older_script_is_accepted(): void
+    {
+        $this->order(499);
+        $body = json_encode($this->mail(499), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $ts = time();
+        $sig = hash_hmac('sha256', $ts.'.'.mb_convert_encoding($body, 'ISO-8859-1', 'UTF-8'), 'secret-secret-secret');
+
+        $this->call('POST', route('api.email-ingest', $this->account->id), [], [], [], [
+            'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json',
+            'HTTP_X_TIMESTAMP' => (string) $ts, 'HTTP_X_SIGNATURE' => $sig,
+        ], $body)->assertOk()->assertJson(['status' => 'matched']);
+    }
+
+    public function test_utf8_unescaped_body_signature_is_accepted(): void
+    {
+        $this->order(499);
+        $body = json_encode($this->mail(499), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $ts = time();
+
+        $this->call('POST', route('api.email-ingest', $this->account->id), [], [], [], [
+            'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json',
+            'HTTP_X_TIMESTAMP' => (string) $ts, 'HTTP_X_SIGNATURE' => hash_hmac('sha256', $ts.'.'.$body, 'secret-secret-secret'),
+        ], $body)->assertOk()->assertJson(['status' => 'matched']);
+    }
+
     public function test_replay_and_duplicates_are_idempotent(): void
     {
         $order = $this->order(499);

@@ -77,7 +77,8 @@ function authResults_(raw) {
 }
 
 function sign_(value) {
-  return Utilities.computeHmacSha256Signature(value, SECRET)
+  // Sign explicit UTF-8 bytes (the string overload can use another charset).
+  return Utilities.computeHmacSha256Signature(Utilities.newBlob(value).getBytes(), Utilities.newBlob(SECRET).getBytes())
     .map(function (b) { return ('0' + (b < 0 ? b + 256 : b).toString(16)).slice(-2); })
     .join('');
 }
