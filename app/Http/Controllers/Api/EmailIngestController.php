@@ -31,7 +31,7 @@ class EmailIngestController extends Controller
 
         if ($paymentAccount === null || $secret === '' || ! $fresh || ! hash_equals($expected, $signature)) {
             // Operator-only diagnostics: the reason, never the secret or signature.
-            Log::warning('email-ingest rejected', [
+            Log::error('email-ingest rejected', [
                 'account' => $account,
                 'reason' => $paymentAccount === null ? 'no_active_fam_email_account'
                     : ($secret === '' ? 'account_has_no_secret'
