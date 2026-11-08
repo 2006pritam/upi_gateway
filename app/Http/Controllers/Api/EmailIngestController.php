@@ -7,6 +7,7 @@ use App\Models\PaymentAccount;
 use App\Services\Email\EmailPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Receives forwarded FamApp e-mails from the merchant's own mailbox script.
@@ -29,6 +30,16 @@ class EmailIngestController extends Controller
         $fresh = ctype_digit($timestamp) && abs(time() - (int) $timestamp) <= $tolerance;
 
         if ($paymentAccount === null || $secret === '' || ! $fresh || ! hash_equals($expected, $signature)) {
+            // Operator-only diagnostics: the reason, never the secret or signature.
+            Log::warning('email-ingest rejected', [
+                'account' => $account,
+                'reason' => $paymentAccount === null ? 'no_active_fam_email_account'
+                    : ($secret === '' ? 'account_has_no_secret'
+                    : (! $fresh ? 'stale_or_missing_timestamp' : 'bad_signature')),
+                'has_signature' => $signature !== '',
+                'body_bytes' => strlen($request->getContent()),
+            ]);
+
             return response()->json(['message' => 'Unauthorized.'], 401);
         }
 
