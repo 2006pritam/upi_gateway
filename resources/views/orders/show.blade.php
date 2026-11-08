@@ -31,7 +31,7 @@
     if ($order->status === 'review') {
         $timeline[] = ['Waiting for your review', null, 'shield', 'bg-sky-100 text-sky-700'];
     } elseif ($order->status === 'paid') {
-        $timeline[] = ['Payment received'.match ($order->verified_by) { 'manual' => ' (marked manually)', 'utr_review' => ' (UTR matched)', 'sandbox' => ' (TEST simulation)', default => ' (auto verified)' }, $order->paid_at, 'check', 'bg-emerald-100 text-emerald-700'];
+        $timeline[] = ['Payment received'.match ($order->verified_by) { 'manual' => ' (marked manually)', 'utr_review' => ' (UTR matched)', 'email' => ' (verified from FamApp email)', 'sandbox' => ' (TEST simulation)', default => ' (auto verified)' }, $order->paid_at, 'check', 'bg-emerald-100 text-emerald-700'];
     } elseif ($order->status === 'failed') {
         $timeline[] = ['TEST payment failed', $order->sandbox_simulated_at, 'x', 'bg-red-100 text-red-700'];
     } elseif ($order->status === 'expired') {

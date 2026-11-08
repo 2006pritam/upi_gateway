@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Services\Email\EmailPaymentService;
 use App\Services\OrderService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -45,14 +46,17 @@ class CheckoutController extends Controller
     /**
      * Customer submits the UTR after paying to a manual-verification UPI ID.
      */
-    public function submitUtr(Request $request, Order $order)
+    public function submitUtr(Request $request, Order $order, EmailPaymentService $emails)
     {
         $this->assertLive($order);
         $data = $request->validate([
             'utr' => ['required', 'string', 'regex:/^\s*\d{12}\s*$/'],
         ], ['utr.regex' => 'UTR must be the 12-digit number shown in your UPI app after payment.']);
 
-        $this->orders->submitCustomerUtr($order->load('paymentAccount'), $data['utr']);
+        $order = $this->orders->submitCustomerUtr($order->load('paymentAccount'), $data['utr']);
+
+        // E-mail verified accounts: if FamApp's mail for this UTR already arrived, approve now.
+        $emails->reconcileSubmittedUtr($order);
 
         return redirect()->route('pay.show', $order);
     }

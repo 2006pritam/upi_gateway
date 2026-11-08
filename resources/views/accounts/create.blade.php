@@ -9,6 +9,7 @@
         'paytm_business' => ['Paytm for Business', 'Your Paytm Business QR. Confirmed automatically via MID.', 'bolt', null],
         'phonepe_pg' => ['PhonePe PG', 'Official PhonePe Payment Gateway. UPI, cards & netbanking.', 'shield', 'Official'],
         'paytm_pg' => ['Paytm PG', 'Official Paytm Payment Gateway with signed APIs.', 'shield', 'Official'],
+        'fam_email' => ['FamPay / FamX (auto)', 'Payments verified automatically from FamApp e-mails in your Gmail.', 'bolt', 'Auto'],
         'manual' => ['Any UPI ID', 'Any bank or app. Customer submits UTR, you confirm it.', 'qr', null],
     ];
     $selected = old('provider', 'paytm_business');
@@ -38,7 +39,7 @@
             <x-input name="payee_name" label="Business / payee name" :value="auth()->user()->displayName()" required help="Shown to customers while paying." />
         </div>
 
-        <div data-for="paytm_business manual">
+        <div data-for="paytm_business manual fam_email">
             <x-input name="upi_id" label="UPI ID" placeholder="paytmqr28100505xxxxxx@paytm" class="font-mono" />
         </div>
 
@@ -107,6 +108,10 @@
                 <li>We confirm the payment with the PG's official Status API and record the UTR.</li>
             </ol>
             <p class="mt-3 text-xs text-slate-500">Settlement and PG charges follow your agreement with PhonePe/Paytm. Start with Sandbox credentials to test.</p>
+        </div>
+        <div class="card p-5" data-for="fam_email">
+            <div class="flex items-center gap-2 text-sm font-semibold text-slate-900"><x-icon name="bolt" class="w-5 h-5 text-emerald-600" /> How e-mail verification works</div>
+            <p class="mt-2 text-sm text-slate-600">Enter your FamX UPI ID. FamApp e-mails you for every payment; a small script in your Gmail forwards those mails here (signed), and matching orders are marked paid. Setup steps appear after you save.</p>
         </div>
         <div class="card p-5" data-for="manual">
             <div class="flex items-center gap-2 text-sm font-semibold text-slate-900"><x-icon name="receipt" class="w-5 h-5 text-sky-600" /> How manual verification works</div>

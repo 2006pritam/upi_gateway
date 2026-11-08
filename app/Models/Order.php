@@ -91,13 +91,14 @@ class Order extends Model
     }
 
     /**
-     * Customers can submit a UTR only for manual-verification accounts, while
+     * Customers can submit a UTR only for manual and e-mail verified accounts, while
      * the order is pending or recently expired, and within the attempt limit.
+     * (For e-mail accounts it is the fallback when a payment could not be matched.)
      */
     public function acceptsCustomerUtr(): bool
     {
         return $this->environment === self::LIVE
-            && $this->paymentAccount?->provider === 'manual'
+            && in_array($this->paymentAccount?->provider, ['manual', 'fam_email'], true)
             && $this->utr_attempts < self::MAX_UTR_ATTEMPTS
             && ($this->status === self::PENDING
                 || ($this->status === self::EXPIRED && $this->expires_at?->gt(now()->subMinutes(self::UTR_GRACE_MINUTES))));

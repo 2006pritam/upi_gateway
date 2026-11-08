@@ -7,6 +7,7 @@ use App\Http\Controllers\ChangePasswordController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ConfirmPasswordController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmailSetupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentAccountController;
@@ -68,6 +69,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/accounts', [PaymentAccountController::class, 'store'])->name('accounts.store');
     // Scope account bindings to the authenticated user so Merchant B cannot
     // reach Merchant A's accounts even if they guess the numeric ID.
+    Route::get('/accounts/{account}/email-setup', [EmailSetupController::class, 'show'])->name('accounts.email-setup')->can('update', 'account');
     Route::post('/accounts/{account}/limit', [PaymentAccountController::class, 'updateLimit'])->name('accounts.limit')->can('update', 'account');
     Route::post('/accounts/{account}/toggle', [PaymentAccountController::class, 'toggle'])->name('accounts.toggle')->can('update', 'account');
     Route::post('/accounts/{account}/default', [PaymentAccountController::class, 'makeDefault'])->name('accounts.default')->can('update', 'account');

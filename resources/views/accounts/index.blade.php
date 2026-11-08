@@ -108,6 +108,9 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 border-t border-slate-100 px-5 py-3 bg-slate-50/60 rounded-b-xl">
+                @if ($account->provider === 'fam_email')
+                    <a href="{{ route('accounts.email-setup', $account) }}" class="btn btn-ghost btn-sm">Email setup</a>
+                @endif
                 @unless ($account->is_default)
                     <form method="POST" action="{{ route('accounts.default', $account) }}">@csrf<button class="btn btn-ghost btn-sm">Make default</button></form>
                 @endunless
