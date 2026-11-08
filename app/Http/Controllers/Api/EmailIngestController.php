@@ -37,6 +37,9 @@ class EmailIngestController extends Controller
                     : ($secret === '' ? 'account_has_no_secret'
                     : (! $fresh ? 'stale_or_missing_timestamp' : 'bad_signature')),
                 'has_signature' => $signature !== '',
+                'sig_len' => strlen($signature),
+                'secret_len' => strlen($secret),
+                'diag' => $paymentAccount === null || $secret === '' ? [] : $this->diagnose($request->getContent(), $timestamp, $signature, $secret),
                 'body_bytes' => strlen($request->getContent()),
             ]);
 
@@ -53,5 +56,26 @@ class EmailIngestController extends Controller
         ]);
 
         return response()->json($emails->ingest($paymentAccount, $data));
+    }
+
+    /** Which alternative body encodings WOULD have matched? (diagnostic booleans only; never used to authenticate) */
+    private function diagnose(string $raw, string $ts, string $sig, string $secret): array
+    {
+        $decoded = json_decode($raw, true);
+        $variants = [
+            'raw' => $raw,
+            'ascii_escaped' => is_array($decoded) ? json_encode($decoded) : '',
+            'unescaped_unicode' => is_array($decoded) ? json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '',
+            'latin1' => mb_convert_encoding($raw, 'ISO-8859-1', 'UTF-8'),
+            'crlf' => str_replace("\n", "\r\n", $raw),
+        ];
+        $out = [];
+        foreach ($variants as $name => $body) {
+            $out[$name] = $body !== '' && hash_equals(hash_hmac('sha256', $ts.'.'.$body, $secret), $sig);
+        }
+        $out['trimmed_secret'] = hash_equals(hash_hmac('sha256', $ts.'.'.$raw, trim($secret)), $sig);
+        $out['ts_only_body'] = hash_equals(hash_hmac('sha256', $raw, $secret), $sig);
+
+        return $out;
     }
 }
