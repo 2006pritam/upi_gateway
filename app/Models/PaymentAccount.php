@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Verifiers\FamPayEmailVerifier;
 use App\Services\Verifiers\ManualVerifier;
 use App\Services\Verifiers\PaytmBusinessVerifier;
 use App\Services\Verifiers\PaytmPgVerifier;
@@ -20,6 +21,7 @@ class PaymentAccount extends Model
      */
     public const PROVIDERS = [
         'paytm_business' => ['label' => 'Paytm for Business (auto verify)', 'verifier' => PaytmBusinessVerifier::class, 'hosted' => false],
+        'fampay_email' => ['label' => 'FamPay (email auto verify)', 'verifier' => FamPayEmailVerifier::class, 'hosted' => false],
         'phonepe_pg' => ['label' => 'PhonePe PG (official)', 'verifier' => PhonePePgVerifier::class, 'hosted' => true],
         'paytm_pg' => ['label' => 'Paytm PG (official)', 'verifier' => PaytmPgVerifier::class, 'hosted' => true],
         'manual' => ['label' => 'Any UPI ID (manual verify)', 'verifier' => ManualVerifier::class, 'hosted' => false],
