@@ -51,4 +51,29 @@ return [
     // Per-IP request limit per minute across all API keys.
     'api_ip_rate_limit' => (int) env('GATEWAY_API_IP_RATE_LIMIT', 600),
 
+    // ── Unique payable amounts ────────────────────────────────────────────────
+    // For e-mail verified accounts (the payer's bank only shows an amount), open orders for the same
+    // price get +₹0.01, +₹0.02 ... so every payment maps to exactly one order.
+    'unique_amount' => [
+        'enabled' => (bool) env('GATEWAY_UNIQUE_AMOUNT', true),
+        'providers' => ['fam_email', 'fampay_email'],
+        'max_offset_paise' => (int) env('GATEWAY_UNIQUE_AMOUNT_MAX_PAISE', 50),
+        'grace_minutes' => 60,   // keep an expired order's amount reserved while it can still be paid
+    ],
+
+    // ── FamApp e-mail verification ────────────────────────────────────────────
+    'fam_email' => [
+        // Only mail from this address, with an SPF/DKIM/DMARC pass for this domain, counts.
+        'sender' => env('GATEWAY_FAM_EMAIL_SENDER', 'no-reply@famapp.in'),
+        'domain' => env('GATEWAY_FAM_EMAIL_DOMAIN', 'famapp.in'),
+        // E-mails older than this are ignored.
+        'max_age_hours' => 72,
+        // Orders that expired less than this many minutes ago can still be paid by e-mail.
+        'late_grace_minutes' => 60,
+        // A payment may be dated this many minutes before the order was created.
+        'clock_skew_minutes' => 2,
+        // Allowed age of a signed ingest request.
+        'signature_tolerance_seconds' => 300,
+    ],
+
 ];

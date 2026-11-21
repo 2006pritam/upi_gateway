@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Verifiers\FamEmailVerifier;
 use App\Services\Verifiers\FamPayEmailVerifier;
 use App\Services\Verifiers\ManualVerifier;
 use App\Services\Verifiers\PaytmBusinessVerifier;
@@ -24,6 +25,7 @@ class PaymentAccount extends Model
         'fampay_email' => ['label' => 'FamPay (email auto verify)', 'verifier' => FamPayEmailVerifier::class, 'hosted' => false],
         'phonepe_pg' => ['label' => 'PhonePe PG (official)', 'verifier' => PhonePePgVerifier::class, 'hosted' => true],
         'paytm_pg' => ['label' => 'Paytm PG (official)', 'verifier' => PaytmPgVerifier::class, 'hosted' => true],
+        'fam_email' => ['label' => 'FamPay / FamX (auto verify by e-mail)', 'verifier' => FamEmailVerifier::class, 'hosted' => false],
         'manual' => ['label' => 'Any UPI ID (manual verify)', 'verifier' => ManualVerifier::class, 'hosted' => false],
     ];
 

@@ -84,37 +84,48 @@ class InstallationManager
         }
     }
 
+    /** Database drivers the application supports. */
+    public const SUPPORTED_DRIVERS = ['mysql', 'pgsql'];
+
+    public static function defaultPort(?string $driver): int
+    {
+        return $driver === 'pgsql' ? 5432 : 3306;
+    }
+
     public function configureDatabase(array $data): void
     {
-        if (($data['db_connection'] ?? null) !== 'mysql') {
-            throw new RuntimeException('Only MySQL is supported as the application database.');
+        $driver = $data['db_connection'] ?? null;
+
+        if (! in_array($driver, self::SUPPORTED_DRIVERS, true)) {
+            throw new RuntimeException('Only MySQL and PostgreSQL are supported as the application database.');
         }
 
         config([
-            'database.default' => 'mysql',
-            'database.connections.mysql.host' => $data['db_host'],
-            'database.connections.mysql.port' => $data['db_port'],
-            'database.connections.mysql.database' => $data['db_database'],
-            'database.connections.mysql.username' => $data['db_username'],
-            'database.connections.mysql.password' => $data['db_password'] ?? '',
+            'database.default' => $driver,
+            "database.connections.{$driver}.host" => $data['db_host'],
+            "database.connections.{$driver}.port" => $data['db_port'],
+            "database.connections.{$driver}.database" => $data['db_database'],
+            "database.connections.{$driver}.username" => $data['db_username'],
+            "database.connections.{$driver}.password" => $data['db_password'] ?? '',
         ]);
 
-        DB::purge('mysql');
+        DB::purge($driver);
     }
 
     public function testDatabaseConnection(array $data): void
     {
+        $driver = $data['db_connection'] ?? 'mysql';
         $originalDefault = config('database.default');
-        $originalConnection = config('database.connections.mysql');
+        $originalConnection = config("database.connections.{$driver}");
 
         try {
             $this->configureDatabase($data);
-            DB::connection('mysql')->select('SELECT 1');
+            DB::connection($driver)->select('SELECT 1');
         } catch (Throwable $e) {
-            DB::purge('mysql');
+            DB::purge($driver);
             config([
                 'database.default' => $originalDefault,
-                'database.connections.mysql' => $originalConnection,
+                "database.connections.{$driver}" => $originalConnection,
             ]);
 
             throw $e;
@@ -146,7 +157,7 @@ class InstallationManager
             'SESSION_SECURE_COOKIE' => str_starts_with(strtolower($data['app_url']), 'https://') ? 'true' : 'false',
             'DB_CONNECTION' => $data['db_connection'],
             'DB_HOST' => $this->envValue($data['db_host'] ?? '127.0.0.1'),
-            'DB_PORT' => (string) ($data['db_port'] ?? '3306'),
+            'DB_PORT' => (string) ($data['db_port'] ?? self::defaultPort($data['db_connection'] ?? null)),
             'DB_DATABASE' => $this->envValue($data['db_database']),
             'DB_USERNAME' => $this->envValue($data['db_username'] ?? ''),
             'DB_PASSWORD' => $this->envValue($data['db_password'] ?? ''),

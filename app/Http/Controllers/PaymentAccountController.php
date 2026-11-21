@@ -6,6 +6,7 @@ use App\Models\PaymentAccount;
 use App\Services\Verifiers\FamPayEmailVerifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class PaymentAccountController extends Controller
@@ -43,8 +44,8 @@ class PaymentAccountController extends Controller
             'client_version' => ['required_if:provider,phonepe_pg', 'nullable', 'string', 'max:10'],
             'imap_username' => ['required_if:provider,fampay_email', 'nullable', 'email', 'max:150'],
             'imap_password' => ['required_if:provider,fampay_email', 'nullable', 'string', 'max:200'],
-            'imap_host' => ['nullable', 'string', 'max:120', 'regex:/^[A-Za-z0-9.\-]+$/'],
-            'imap_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'imap_host' => ['nullable', 'string', Rule::in(FamPayEmailVerifier::ALLOWED_HOSTS)],
+            'imap_port' => ['nullable', 'integer', Rule::in([FamPayEmailVerifier::ALLOWED_PORT])],
             'imap_sender' => ['nullable', 'string', 'max:150'],
             'environment' => [Rule::requiredIf($hosted), 'nullable', Rule::in(['sandbox', 'production'])],
         ], [
@@ -80,12 +81,14 @@ class PaymentAccountController extends Controller
                 'client_version' => $data['client_version'],
                 'environment' => $data['environment'],
             ],
+            // Secret used to sign e-mails forwarded from the merchant's mailbox.
+            'fam_email' => ['ingest_secret' => Str::random(48)],
             default => null,
         };
 
         $user = $request->user();
 
-        $user->paymentAccounts()->create([
+        $account = $user->paymentAccounts()->create([
             'provider' => $data['provider'],
             'label' => $data['label'],
             'upi_id' => $hosted ? null : $data['upi_id'],
@@ -94,6 +97,11 @@ class PaymentAccountController extends Controller
             'is_default' => ! $user->paymentAccounts()->exists(),
             'daily_limit' => $data['daily_limit'] ?? null,
         ]);
+
+        if ($account->provider === 'fam_email') {
+            return redirect()->route('accounts.email-setup', $account)
+                ->with('status', 'Account added. Connect your Gmail below so payments are verified automatically.');
+        }
 
         return redirect()->route('accounts.index')->with('status', 'UPI account added.');
     }

@@ -18,12 +18,18 @@
         <input type="url" name="app_url" value="{{ old('app_url', 'http://localhost') }}" class="input" placeholder="https://yourdomain.com" required>
     </div>
 
-    <input type="hidden" name="db_connection" value="mysql">
+    <div>
+        <label class="label">Database Type</label>
+        <select name="db_connection" class="input">
+            <option value="mysql" @selected(old('db_connection', 'mysql') === 'mysql')>MySQL</option>
+            <option value="pgsql" @selected(old('db_connection') === 'pgsql')>PostgreSQL</option>
+        </select>
+    </div>
     <div class="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-200">
-        MySQL is required. Enter the credentials for your application database.
+        MySQL or PostgreSQL is required. Enter the credentials for your application database.
     </div>
 
-    <div id="mysql_fields" class="space-y-4">
+    <div id="db_fields" class="space-y-4">
         <div class="grid gap-3 sm:grid-cols-3">
             <div class="sm:col-span-2">
                 <label class="label">Host</label>
@@ -31,7 +37,7 @@
             </div>
             <div>
                 <label class="label">Port</label>
-                <input type="text" name="db_port" value="{{ old('db_port', '3306') }}" class="input" placeholder="3306">
+                <input type="text" name="db_port" value="{{ old('db_port') }}" class="input" placeholder="3306 / 5432">
             </div>
         </div>
         <div>

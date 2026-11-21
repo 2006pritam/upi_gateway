@@ -14,7 +14,8 @@ use Throwable;
  *
  * Security checks applied to every candidate email:
  * 1. Sender whitelist (default: alerts@fampay.in)
- * 2. SPF + DKIM pass verification via the Authentication-Results header
+ * 2. SPF pass + DKIM pass signed by the sender's own domain, read from the first
+ *    (receiving server's) Authentication-Results header only
  * 3. Order time-window check (ignores stale/old alerts)
  * 4. Incoming-credit check (rejects outgoing debit/sent notifications)
  * 5. Exact amount match in paise + 12-digit Bank UTR replay-attack check
@@ -25,7 +26,12 @@ class FamPayEmailVerifier implements Verifier
 
     public const DEFAULT_PORT = 993;
 
-    public const DEFAULT_SENDER = 'alerts@fampay.in';
+    public const DEFAULT_SENDER = 'no-reply@famapp.in';
+
+    /** Mail servers a merchant may connect to (stops the server being aimed at internal hosts). */
+    public const ALLOWED_HOSTS = ['imap.gmail.com', 'imap.googlemail.com', 'outlook.office365.com', 'imap-mail.outlook.com', 'imap.mail.yahoo.com'];
+
+    public const ALLOWED_PORT = 993;
 
     public function __construct(
         private readonly SimpleImapClient $imap,
@@ -44,6 +50,10 @@ class FamPayEmailVerifier implements Verifier
         $host = $account->credential('imap_host') ?: self::DEFAULT_HOST;
         $port = (int) ($account->credential('imap_port') ?: self::DEFAULT_PORT);
         $sender = strtolower(trim($account->credential('imap_sender') ?: self::DEFAULT_SENDER));
+
+        if (! in_array(strtolower($host), self::ALLOWED_HOSTS, true) || $port !== self::ALLOWED_PORT) {
+            return VerificationResult::pending(['error' => 'IMAP host not allowed']);
+        }
         $sinceDate = ($order->created_at ?? now())->copy()->subDay()->format('d-M-Y');
 
         try {
@@ -65,7 +75,7 @@ class FamPayEmailVerifier implements Verifier
             return VerificationResult::pending(['error' => 'IMAP check failed']);
         }
 
-        $expectedPaise = $this->toPaise($order->amount);
+        $expectedPaise = $this->toPaise($order->payableAmount());
 
         foreach ($messages as $message) {
             $parsed = $this->parseMessage($message['headers'], $message['body'], $sender);
@@ -127,7 +137,7 @@ class FamPayEmailVerifier implements Verifier
             return null;
         }
 
-        if (! $this->passesEmailAuth($headers['authentication-results'] ?? '')) {
+        if (! $this->passesEmailAuth($headers['authentication-results'] ?? '', $fromEmail)) {
             return null;
         }
 
@@ -172,7 +182,9 @@ class FamPayEmailVerifier implements Verifier
             [$name, $value] = explode(':', $line, 2);
             $key = strtolower(trim($name));
             $val = trim($value);
-            $parsed[$key] = isset($parsed[$key]) ? $parsed[$key].'; '.$val : $val;
+            // Topmost header wins: it was added by the receiving server. Later duplicates
+            // (e.g. a forged Authentication-Results inside the message) are ignored.
+            $parsed[$key] ??= $val;
         }
 
         return $parsed;
@@ -206,19 +218,24 @@ class FamPayEmailVerifier implements Verifier
     }
 
     /**
-     * Require both DKIM and SPF pass in the mail server's Authentication-Results
-     * header to drop spoofed SMTP relay emails.
+     * Require SPF pass and a DKIM pass signed by the sender's own domain. A pass for
+     * some other domain (an attacker's) does not count.
      */
-    private function passesEmailAuth(string $authResults): bool
+    private function passesEmailAuth(string $authResults, string $fromEmail): bool
     {
-        if ($authResults === '') {
+        if ($authResults === '' || ! str_contains($fromEmail, '@')) {
             return false;
         }
 
-        $hasDkimPass = (bool) preg_match('/\bdkim=pass\b/i', $authResults);
-        $hasSpfPass = (bool) preg_match('/\bspf=pass\b/i', $authResults);
+        $domain = preg_quote(substr(strrchr($fromEmail, '@'), 1), '/');
 
-        return $hasDkimPass && $hasSpfPass;
+        $dkimAligned = (bool) preg_match(
+            '/\bdkim=pass\b[^;]*?\bheader\.(?:d|i)=@?(?:[a-z0-9\-]+\.)*'.$domain.'(?![a-z0-9.\-])/i',
+            $authResults,
+        );
+        $spfPass = (bool) preg_match('/\bspf=pass\b/i', $authResults);
+
+        return $dkimAligned && $spfPass;
     }
 
     private function isIncomingCredit(string $text): bool
@@ -349,7 +366,7 @@ class FamPayEmailVerifier implements Verifier
     {
         $oldestId = Order::where('payment_account_id', $order->payment_account_id)
             ->where('status', Order::PENDING)
-            ->where('amount', $order->amount)
+            ->whereRaw('COALESCE(payable_amount, amount) = CAST(? AS DECIMAL(12,2))', [$order->payableAmount()])
             ->orderBy('id')
             ->value('id');
 

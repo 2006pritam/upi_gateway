@@ -223,8 +223,8 @@ Both supported deployment paths use the **same Installation Wizard**:
 ### Server Requirements
 
 - PHP 8.2 or newer.
-- MySQL database (mandatory; SQLite is not supported for application runtime).
-- PDO and PDO MySQL.
+- MySQL or PostgreSQL database (mandatory; SQLite is not supported for application runtime).
+- PDO and PDO MySQL (or PDO PostgreSQL).
 - Required Laravel PHP extensions, including cURL, OpenSSL, Mbstring, Tokenizer, XML, JSON, and Fileinfo.
 - Writable Laravel runtime directories with appropriately restricted permissions.
 - HTTPS for production deployments.
@@ -307,7 +307,7 @@ For command-line or development deployments, configure the following variables i
 | `APP_ENV` | Application environment | production |
 | `APP_DEBUG` | Debug mode | false |
 | `APP_URL` | Application URL | https://example.com |
-| `DB_CONNECTION` | Database driver | mysql |
+| `DB_CONNECTION` | Database driver (`mysql` or `pgsql`) | mysql |
 | `DB_HOST` | Database host | 127.0.0.1 |
 | `DB_DATABASE` | Database name | upi_gateway |
 | `DB_USERNAME` | Database username | db_user |
@@ -320,7 +320,7 @@ Never commit production credentials or API secrets to GitHub.
 
 ## 🗄️ MySQL Configuration
 
-MySQL is the required application database. SQLite is not supported by the installer or application runtime.
+MySQL and PostgreSQL are the supported application databases. SQLite is not supported by the installer or application runtime. For PostgreSQL, choose **PostgreSQL** in the installer (default port 5432) or set `DB_CONNECTION=pgsql`; hosted providers that require TLS (for example Neon) also need `DB_SSLMODE=require`. See [Render deployment](docs/RENDER.md) for a Docker-based example.
 
 Example MySQL environment configuration for deployments managed through the command line:
 

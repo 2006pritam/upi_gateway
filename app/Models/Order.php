@@ -33,6 +33,7 @@ class Order extends Model
         'payment_account_id',
         'client_order_id',
         'amount',
+        'payable_amount',
         'status',
         'customer_name',
         'customer_email',
@@ -46,6 +47,7 @@ class Order extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'payable_amount' => 'decimal:2',
             'provider_response' => 'array',
             'paid_at' => 'datetime',
             'expires_at' => 'datetime',
@@ -85,19 +87,31 @@ class Order extends Model
         return $this->hasMany(WebhookLog::class);
     }
 
+    /** The exact amount the customer must pay (price, plus any paise added to make it unique). */
+    public function payableAmount(): string
+    {
+        return number_format((float) ($this->payable_amount ?? $this->amount), 2, '.', '');
+    }
+
+    public function hasAdjustedAmount(): bool
+    {
+        return $this->payable_amount !== null && (float) $this->payable_amount !== (float) $this->amount;
+    }
+
     public function isPending(): bool
     {
         return $this->status === self::PENDING;
     }
 
     /**
-     * Customers can submit a UTR only for manual-verification accounts, while
+     * Customers can submit a UTR only for manual and e-mail verified accounts, while
      * the order is pending or recently expired, and within the attempt limit.
+     * (For e-mail accounts it is the fallback when a payment could not be matched.)
      */
     public function acceptsCustomerUtr(): bool
     {
         return $this->environment === self::LIVE
-            && $this->paymentAccount?->provider === 'manual'
+            && in_array($this->paymentAccount?->provider, ['manual', 'fam_email'], true)
             && $this->utr_attempts < self::MAX_UTR_ATTEMPTS
             && ($this->status === self::PENDING
                 || ($this->status === self::EXPIRED && $this->expires_at?->gt(now()->subMinutes(self::UTR_GRACE_MINUTES))));
@@ -119,11 +133,20 @@ class Order extends Model
         return $scheme.'?'.http_build_query([
             'pa' => $account->upi_id,
             'pn' => $account->payee_name,
-            'am' => number_format((float) $this->amount, 2, '.', ''),
+            'am' => $this->payableAmount(),
             'cu' => 'INR',
             'tr' => $this->order_no,
             'tn' => $this->note ?: $this->order_no,
         ], '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
+     * Android "open this specific UPI app" link (works from Chrome on Android; other platforms ignore it).
+     * Same payment details as upiIntentUrl(), just pinned to one app's package name.
+     */
+    public function androidIntentUrl(string $package): string
+    {
+        return 'intent://'.explode('://', $this->upiIntentUrl(), 2)[1].'#Intent;scheme=upi;package='.$package.';end';
     }
 
     public function paymentUrl(): string
@@ -142,6 +165,8 @@ class Order extends Model
             'order_id' => $this->order_no,
             'client_order_id' => $this->client_order_id,
             'amount' => $this->amount,
+            // What the customer pays; differs from `amount` by a few paise when needed to tell orders apart.
+            'payable_amount' => $this->payableAmount(),
             'currency' => 'INR',
             'status' => $this->status,
             'environment' => $this->environment,

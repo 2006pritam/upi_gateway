@@ -102,6 +102,68 @@ class FamPayEmailVerifierTest extends TestCase
         $this->assertFalse($result->paid);
     }
 
+    public function test_dkim_pass_for_attackers_own_domain_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createPendingOrder($user, $this->createFamPayAccount($user), '100.00');
+
+        $imap = Mockery::mock(SimpleImapClient::class);
+        $imap->shouldReceive('fetchRecentFromSender')->once()->andReturn([[
+            'seq' => 1,
+            'headers' => "From: FamPay <alerts@fampay.in>\r\nSubject: Money received\r\nDate: ".now()->toRfc2822String()."\r\nAuthentication-Results: mx.google.com; dkim=pass header.i=@evil.example; spf=pass smtp.mailfrom=evil.example\r\n",
+            'body' => 'You received ₹100.00 via UPI. UTR: 432599999999.',
+        ]]);
+
+        $this->assertFalse((new FamPayEmailVerifier($imap))->check($order)->paid);
+    }
+
+    public function test_forged_second_authentication_results_header_is_ignored(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->createPendingOrder($user, $this->createFamPayAccount($user), '100.00');
+
+        $imap = Mockery::mock(SimpleImapClient::class);
+        $imap->shouldReceive('fetchRecentFromSender')->once()->andReturn([[
+            'seq' => 1,
+            'headers' => "From: FamPay <alerts@fampay.in>\r\nSubject: Money received\r\nDate: ".now()->toRfc2822String()."\r\nAuthentication-Results: mx.google.com; dkim=fail; spf=fail\r\nAuthentication-Results: mx.google.com; dkim=pass header.i=@fampay.in; spf=pass\r\n",
+            'body' => 'You received ₹100.00 via UPI. UTR: 432599999999.',
+        ]]);
+
+        $this->assertFalse((new FamPayEmailVerifier($imap))->check($order)->paid);
+    }
+
+    public function test_non_allowlisted_imap_host_is_never_contacted(): void
+    {
+        $user = User::factory()->create();
+        $account = $this->createFamPayAccount($user);
+        $account->update(['credentials' => array_merge($account->credentials, ['imap_host' => '127.0.0.1', 'imap_port' => '5432'])]);
+        $order = $this->createPendingOrder($user, $account->fresh(), '100.00');
+
+        $imap = Mockery::mock(SimpleImapClient::class);
+        $imap->shouldNotReceive('fetchRecentFromSender');
+
+        $this->assertFalse((new FamPayEmailVerifier($imap))->check($order)->paid);
+    }
+
+    public function test_real_famapp_email_format_is_accepted(): void
+    {
+        $user = User::factory()->create();
+        $account = $this->createFamPayAccount($user);
+        $account->update(['credentials' => array_merge($account->credentials, ['imap_sender' => 'no-reply@famapp.in'])]);
+        $order = $this->createPendingOrder($user, $account->fresh(), '1.00');
+
+        $imap = Mockery::mock(SimpleImapClient::class);
+        $imap->shouldReceive('fetchRecentFromSender')->once()->andReturn([[
+            'seq' => 1,
+            'headers' => "From: FamApp <no-reply@famapp.in>\r\nSubject: You received ₹1.0 in your FamX account\r\nDate: ".now()->toRfc2822String()."\r\nMessage-ID: <abc@famapp.in>\r\nAuthentication-Results: mx.google.com; dkim=pass header.i=@famapp.in header.s=s1; spf=pass smtp.mailfrom=famapp.in; dmarc=pass header.from=famapp.in\r\n",
+            'body' => 'Hey Pritam, You have successfully received ₹1.0 from JOHN DOE Transaction ID : FMPIB6951511093 Updated Balance : ₹1.0 UTR : 631229816582 If this was not done by you contact support',
+        ]]);
+
+        $result = (new FamPayEmailVerifier($imap))->check($order);
+        $this->assertTrue($result->paid);
+        $this->assertSame('631229816582', $result->utr);
+    }
+
     private function createFamPayAccount(User $user): PaymentAccount
     {
         return $user->paymentAccounts()->create([
