@@ -75,7 +75,7 @@ class FamPayEmailVerifier implements Verifier
             return VerificationResult::pending(['error' => 'IMAP check failed']);
         }
 
-        $expectedPaise = $this->toPaise($order->amount);
+        $expectedPaise = $this->toPaise($order->payableAmount());
 
         foreach ($messages as $message) {
             $parsed = $this->parseMessage($message['headers'], $message['body'], $sender);
@@ -366,7 +366,7 @@ class FamPayEmailVerifier implements Verifier
     {
         $oldestId = Order::where('payment_account_id', $order->payment_account_id)
             ->where('status', Order::PENDING)
-            ->where('amount', $order->amount)
+            ->whereRaw('COALESCE(payable_amount, amount) = CAST(? AS DECIMAL(12,2))', [$order->payableAmount()])
             ->orderBy('id')
             ->value('id');
 

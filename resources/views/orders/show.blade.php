@@ -122,7 +122,7 @@
                 <div class="p-5">
                     <div class="rounded-lg bg-slate-50 ring-1 ring-slate-200 p-4">
                         <div class="text-xs text-slate-500">Customer says they paid</div>
-                        <div class="mt-1 text-2xl font-bold text-slate-900 tabular-nums">₹{{ number_format($order->amount, 2) }}</div>
+                        <div class="mt-1 text-2xl font-bold text-slate-900 tabular-nums">₹{{ number_format((float) $order->payableAmount(), 2) }}</div>
                         <div class="mt-3 text-xs text-slate-500">with UTR</div>
                         <div class="mt-1 font-mono text-lg font-semibold tracking-wider text-slate-900">{{ $order->customer_utr }}</div>
                         <div class="mt-3 text-xs text-slate-500">to <span class="font-mono">{{ $order->paymentAccount->upi_id }}</span> · {{ $order->utr_submitted_at?->diffForHumans() }}</div>
@@ -131,7 +131,7 @@
                     <form method="POST" action="{{ route('orders.approve-utr', $order) }}" class="mt-5">
                         @csrf
                         <label for="bank_utr" class="label">UTR in your bank / UPI app</label>
-                        <p class="text-xs text-slate-500 -mt-1 mb-2">Open your bank or UPI app, find a <b>₹{{ number_format($order->amount, 2) }}</b> credit and type its UTR. It must match exactly.</p>
+                        <p class="text-xs text-slate-500 -mt-1 mb-2">Open your bank or UPI app, find a <b>₹{{ number_format((float) $order->payableAmount(), 2) }}</b> credit and type its UTR. It must match exactly.</p>
                         <input id="bank_utr" name="bank_utr" inputmode="numeric" autocomplete="off" required placeholder="12-digit UTR" class="input font-mono tracking-wider mb-3 @error('bank_utr') ring-red-400 @enderror">
                         @error('bank_utr')<p class="-mt-2 mb-3 text-xs text-red-600">{{ $message }}</p>@enderror
                         <button class="btn btn-success w-full"><x-icon name="check" class="w-4 h-4" /> Match &amp; approve</button>
@@ -164,7 +164,7 @@
                     <form method="POST" action="{{ route('orders.mark-paid', $order) }}" class="pt-5 border-t border-slate-100">
                         @csrf
                         <div class="text-sm font-semibold text-slate-900">Mark as paid manually</div>
-                        <p class="text-xs text-slate-500 mt-1 mb-3">Only after you see <b>₹{{ number_format($order->amount, 2) }}</b> credited in your bank or UPI app.</p>
+                        <p class="text-xs text-slate-500 mt-1 mb-3">Only after you see <b>₹{{ number_format((float) $order->payableAmount(), 2) }}</b> credited in your bank or UPI app.</p>
                         <input name="utr" required placeholder="12-digit UTR / reference no." class="input font-mono mb-3">
                         <button data-confirm="Confirm you have received ₹{{ number_format($order->amount, 2) }} for this order?" class="btn btn-success w-full"><x-icon name="check" class="w-4 h-4" /> Mark as paid</button>
                     </form>

@@ -33,6 +33,7 @@ class Order extends Model
         'payment_account_id',
         'client_order_id',
         'amount',
+        'payable_amount',
         'status',
         'customer_name',
         'customer_email',
@@ -46,6 +47,7 @@ class Order extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'payable_amount' => 'decimal:2',
             'provider_response' => 'array',
             'paid_at' => 'datetime',
             'expires_at' => 'datetime',
@@ -85,6 +87,17 @@ class Order extends Model
         return $this->hasMany(WebhookLog::class);
     }
 
+    /** The exact amount the customer must pay (price, plus any paise added to make it unique). */
+    public function payableAmount(): string
+    {
+        return number_format((float) ($this->payable_amount ?? $this->amount), 2, '.', '');
+    }
+
+    public function hasAdjustedAmount(): bool
+    {
+        return $this->payable_amount !== null && (float) $this->payable_amount !== (float) $this->amount;
+    }
+
     public function isPending(): bool
     {
         return $this->status === self::PENDING;
@@ -120,7 +133,7 @@ class Order extends Model
         return $scheme.'?'.http_build_query([
             'pa' => $account->upi_id,
             'pn' => $account->payee_name,
-            'am' => number_format((float) $this->amount, 2, '.', ''),
+            'am' => $this->payableAmount(),
             'cu' => 'INR',
             'tr' => $this->order_no,
             'tn' => $this->note ?: $this->order_no,
@@ -143,6 +156,8 @@ class Order extends Model
             'order_id' => $this->order_no,
             'client_order_id' => $this->client_order_id,
             'amount' => $this->amount,
+            // What the customer pays; differs from `amount` by a few paise when needed to tell orders apart.
+            'payable_amount' => $this->payableAmount(),
             'currency' => 'INR',
             'status' => $this->status,
             'environment' => $this->environment,

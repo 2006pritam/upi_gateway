@@ -55,6 +55,7 @@ class OrderService
             'payment_account_id' => $account?->id,
             'client_order_id' => $data['client_order_id'] ?? $orderNo,
             'amount' => $data['amount'],
+            'payable_amount' => $environment === Order::LIVE && $account ? $this->allocatePayableAmount($account, (float) $data['amount']) : null,
             'status' => Order::PENDING,
             'customer_name' => $data['customer_name'] ?? null,
             'customer_email' => $data['customer_email'] ?? null,
@@ -68,6 +69,38 @@ class OrderService
         $order->save();
 
         return $order;
+    }
+
+    /**
+     * For e-mail verified accounts the payer's bank alert only carries an amount, so two open orders
+     * for the same price are indistinguishable. Give each its own amount: price, price+0.01, ...
+     * Runs inside create()'s per-merchant lock, so two requests cannot take the same slot.
+     */
+    private function allocatePayableAmount(PaymentAccount $account, float $price): ?string
+    {
+        $cfg = config('gateway.unique_amount');
+        if (! ($cfg['enabled'] ?? false) || ! in_array($account->provider, $cfg['providers'] ?? [], true)) {
+            return null;
+        }
+
+        $reservedSince = now()->subMinutes((int) ($cfg['grace_minutes'] ?? 60));
+        $taken = Order::where('payment_account_id', $account->id)
+            ->where('environment', Order::LIVE)
+            ->where(fn ($q) => $q->whereIn('status', [Order::PENDING, Order::REVIEW])
+                ->orWhere(fn ($q) => $q->where('status', Order::EXPIRED)->where('expires_at', '>', $reservedSince)))
+            ->get(['amount', 'payable_amount'])
+            ->map(fn (Order $o) => number_format((float) ($o->payable_amount ?? $o->amount), 2, '.', ''))
+            ->flip();
+
+        $paise = (int) round($price * 100);
+        for ($offset = 0; $offset <= (int) ($cfg['max_offset_paise'] ?? 50); $offset++) {
+            $candidate = number_format(($paise + $offset) / 100, 2, '.', '');
+            if (! $taken->has($candidate)) {
+                return $candidate;
+            }
+        }
+
+        throw ValidationException::withMessages(['amount' => 'Too many open orders for this amount right now. Please try again in a few minutes.']);
     }
 
     /**

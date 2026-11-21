@@ -145,6 +145,7 @@ class FamEmailVerificationTest extends TestCase
 
     public function test_purpose_picks_the_order_among_same_amounts(): void
     {
+        config(['gateway.unique_amount.enabled' => false]);   // exercise the same-amount fallback
         $a = $this->order(100);
         $b = $this->order(100);
         $this->ingest($this->mail(100, purpose: $b->order_no))->assertJson(['status' => 'matched']);
@@ -154,6 +155,7 @@ class FamEmailVerificationTest extends TestCase
 
     public function test_same_amount_without_note_is_ambiguous_and_not_guessed(): void
     {
+        config(['gateway.unique_amount.enabled' => false]);   // exercise the same-amount fallback
         $a = $this->order(100);
         $b = $this->order(100);
         $this->ingest($this->mail(100))->assertJson(['status' => 'ambiguous']);
@@ -186,6 +188,7 @@ class FamEmailVerificationTest extends TestCase
 
     public function test_customer_utr_reconciles_unmatched_payment(): void
     {
+        config(['gateway.unique_amount.enabled' => false]);   // exercise the same-amount fallback
         $a = $this->order(100);
         $b = $this->order(100);
         $this->ingest($this->mail(100, '555555555555'))->assertJson(['status' => 'ambiguous']);
@@ -215,5 +218,50 @@ class FamEmailVerificationTest extends TestCase
         ])->assertSessionHasNoErrors()->assertRedirect();
         $new = PaymentAccount::where('label', 'F2')->first();
         $this->assertNotEmpty($new->credentials['ingest_secret'] ?? null);
+    }
+
+    public function test_same_price_orders_get_distinct_payable_amounts(): void
+    {
+        $a = $this->order(100);
+        $b = $this->order(100);
+        $c = $this->order(100);
+
+        $this->assertSame(['100.00', '100.01', '100.02'], [$a->payableAmount(), $b->payableAmount(), $c->payableAmount()]);
+        $this->assertEquals(100, $b->amount);                       // price the website asked for is untouched
+        $this->assertSame('100.01', $b->toApiArray()['payable_amount']);
+        $this->assertStringContainsString('am=100.01', $b->upiIntentUrl());
+    }
+
+    public function test_payment_of_the_adjusted_amount_pays_exactly_that_order(): void
+    {
+        $a = $this->order(100);
+        $b = $this->order(100);
+
+        $this->ingest($this->mail(100.01, '222222222222'))->assertJson(['status' => 'matched']);
+        $this->assertSame(Order::PENDING, $a->fresh()->status);
+        $this->assertSame(Order::PAID, $b->fresh()->status);
+
+        $this->ingest($this->mail(100.00, '111111111111'))->assertJson(['status' => 'matched']);
+        $this->assertSame(Order::PAID, $a->fresh()->status);
+    }
+
+    public function test_slot_is_reused_after_an_order_is_paid_and_not_for_other_accounts(): void
+    {
+        $a = $this->order(100);
+        $this->ingest($this->mail(100, '333333333333'))->assertJson(['status' => 'matched']);
+        $this->assertSame('100.00', $this->order(100)->payableAmount());
+
+        $manual = $this->merchant->paymentAccounts()->create([
+            'provider' => 'manual', 'label' => 'M', 'upi_id' => 'm@paytm', 'payee_name' => 'M',
+        ]);
+        $o = app(OrderService::class)->create($this->merchant, ['amount' => 100, 'payment_account_id' => $manual->id]);
+        $this->assertNull($o->payable_amount);                       // only e-mail verified accounts adjust
+    }
+
+    public function test_feature_can_be_switched_off(): void
+    {
+        config(['gateway.unique_amount.enabled' => false]);
+        $this->order(100);
+        $this->assertNull($this->order(100)->payable_amount);
     }
 }

@@ -113,7 +113,7 @@ class EmailPaymentService
 
         $payment = EmailPayment::where('payment_account_id', $order->payment_account_id)
             ->where('utr', $order->customer_utr)
-            ->where('amount', $order->amount)
+            ->where('amount', $order->payableAmount())
             ->whereIn('status', [EmailPayment::UNMATCHED, EmailPayment::AMBIGUOUS])
             ->first();
 
@@ -165,7 +165,7 @@ class EmailPaymentService
         // The customer already typed this very UTR on the checkout page.
         $reviewed = $base()->where('status', Order::REVIEW)
             ->where('customer_utr', $payment->utr)
-            ->where('amount', $payment->amount)
+            ->whereRaw('COALESCE(payable_amount, amount) = CAST(? AS DECIMAL(12,2))', [$payment->amount])
             ->first();
 
         if ($reviewed && $this->paidAfterOrderCreated($reviewed, $paidAt)) {
@@ -175,7 +175,7 @@ class EmailPaymentService
         $grace = now()->subMinutes((int) config('gateway.fam_email.late_grace_minutes', 60));
 
         $candidates = $base()
-            ->where('amount', $payment->amount)
+            ->whereRaw('COALESCE(payable_amount, amount) = CAST(? AS DECIMAL(12,2))', [$payment->amount])
             ->where('created_at', '<=', $paidAt->copy()->addMinutes($this->skew()))
             ->where(fn ($q) => $q->where('status', Order::PENDING)
                 ->orWhere(fn ($q) => $q->where('status', Order::EXPIRED)->where('expires_at', '>', $grace)))

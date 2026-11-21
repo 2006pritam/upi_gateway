@@ -1,9 +1,9 @@
 @extends('layouts.base')
-@section('title', 'Pay ₹'.number_format($order->amount, 2).' to '.$order->user->displayName())
+@section('title', 'Pay ₹'.number_format((float) $order->payableAmount(), 2).' to '.$order->user->displayName())
 
 @php
     $merchant = $order->user->displayName();
-    $amount = number_format($order->amount, 2);
+    $amount = number_format((float) $order->payableAmount(), 2);
     $totalSeconds = max(1, $order->created_at->diffInSeconds($order->expires_at ?? now()->addMinutes(config('gateway.order_expiry_minutes', 15))));
     $apps = [
         ['GPay',    'tez://upi/pay',   'text-[#1a73e8]', 'images/upi/gpay.png'],
@@ -37,6 +37,9 @@
                 <div class="relative mt-8">
                     <div class="text-xs uppercase tracking-wider text-slate-400">Amount</div>
                     <div class="mt-1 text-4xl font-bold tracking-tight tabular-nums">₹{{ $amount }}</div>
+                    @if ($order->hasAdjustedAmount())
+                        <div class="mt-1 text-xs opacity-80">Includes ₹{{ number_format((float) $order->payableAmount() - (float) $order->amount, 2) }} so we can identify your payment. Please pay exactly ₹{{ $amount }}.</div>
+                    @endif
                     @if ($order->note)<div class="mt-2 text-sm text-slate-300">{{ $order->note }}</div>@endif
                 </div>
 
