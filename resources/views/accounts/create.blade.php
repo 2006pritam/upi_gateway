@@ -7,6 +7,7 @@
 @php
     $meta = [
         'paytm_business' => ['Paytm for Business', 'Your Paytm Business QR. Confirmed automatically via MID.', 'bolt', null],
+        'fampay_email' => ['FamPay (Email Auto)', 'Your @fam UPI ID. Confirmed automatically from FamPay alert emails via IMAP.', 'bolt', null],
         'phonepe_pg' => ['PhonePe PG', 'Official PhonePe Payment Gateway. UPI, cards & netbanking.', 'shield', 'Official'],
         'paytm_pg' => ['Paytm PG', 'Official Paytm Payment Gateway with signed APIs.', 'shield', 'Official'],
         'fam_email' => ['FamPay / FamX (auto)', 'Payments verified automatically from FamApp e-mails in your Gmail.', 'bolt', 'Auto'],
@@ -26,7 +27,7 @@
                     <span class="grid place-items-center w-10 h-10 rounded-lg bg-white ring-1 ring-slate-200 text-slate-600 peer-checked:text-brand-600 shrink-0"><x-icon :name="$icon" class="w-5 h-5" /></span>
                     <span>
                         <span class="flex items-center gap-2 text-sm font-semibold text-slate-900">{{ $title }}
-                            @if ($badge)<span class="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">{{ $badge }}</span>@endif
+                        @if ($badge)<span class="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">{{ $badge }}</span>@endif
                         </span>
                         <span class="block mt-1 text-xs text-slate-500">{{ $desc }}</span>
                     </span>
@@ -39,8 +40,23 @@
             <x-input name="payee_name" label="Business / payee name" :value="auth()->user()->displayName()" required help="Shown to customers while paying." />
         </div>
 
-        <div data-for="paytm_business manual fam_email">
-            <x-input name="upi_id" label="UPI ID" placeholder="paytmqr28100505xxxxxx@paytm" class="font-mono" />
+        <div data-for="paytm_business fampay_email manual fam_email">
+            <x-input name="upi_id" label="UPI ID" placeholder="yourname@fam or paytmqr28100505xxxxxx@paytm" class="font-mono" />
+        </div>
+
+        <div data-for="fampay_email">
+            <div class="grid sm:grid-cols-2 gap-x-4">
+                <x-input name="imap_username" label="Gmail / IMAP email" type="email" placeholder="you@gmail.com" autocomplete="off" class="font-mono"
+                    help="The inbox that receives FamPay payment alert emails." />
+                <x-input name="imap_password" label="Google App Password" type="password" autocomplete="off" class="font-mono"
+                    help="16-character App Password from Google Account → Security → 2-Step Verification → App passwords." />
+            </div>
+            <div class="grid sm:grid-cols-3 gap-x-4">
+                <x-input name="imap_host" label="IMAP host" placeholder="imap.gmail.com" value="{{ old('imap_host', 'imap.gmail.com') }}" class="font-mono" />
+                <x-input name="imap_port" label="IMAP port" type="number" placeholder="993" value="{{ old('imap_port', '993') }}" class="font-mono" />
+                <x-input name="imap_sender" label="FamPay sender" placeholder="no-reply@famapp.in" value="{{ old('imap_sender', 'no-reply@famapp.in') }}" class="font-mono"
+                    help="Only emails from this address, DKIM-signed by its own domain, are accepted." />
+            </div>
         </div>
 
         <div data-for="phonepe_pg paytm_pg" class="mb-5">
@@ -99,6 +115,15 @@
                 <li>Orders are marked paid automatically once the amount matches.</li>
             </ol>
             <p class="mt-3 text-xs text-slate-500">Uses Paytm's merchant status endpoint, which is not an official public API.</p>
+        </div>
+        <div class="card p-5" data-for="fampay_email">
+            <div class="flex items-center gap-2 text-sm font-semibold text-slate-900"><x-icon name="bolt" class="w-5 h-5 text-sky-600" /> How FamPay email verification works</div>
+            <ol class="mt-3 space-y-2 text-sm text-slate-600 list-decimal list-inside">
+                <li>Enter your FamPay <span class="font-mono">@fam</span> UPI ID and the Gmail inbox receiving FamPay alerts.</li>
+                <li>Generate a 16-character Google App Password (credentials are stored encrypted).</li>
+                <li>We read only SPF+DKIM signed emails from FamPay, verify the exact amount &amp; 12-digit UTR, and mark orders paid automatically.</li>
+            </ol>
+            <p class="mt-3 text-xs text-slate-500">Read-only IMAP connection — emails are never modified or deleted. Each UTR can only confirm one order.</p>
         </div>
         <div class="card p-5" data-for="phonepe_pg paytm_pg">
             <div class="flex items-center gap-2 text-sm font-semibold text-slate-900"><x-icon name="shield" class="w-5 h-5 text-sky-600" /> How the official PG works</div>

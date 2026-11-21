@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PaymentAccount;
+use App\Services\Verifiers\FamPayEmailVerifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -41,19 +42,33 @@ class PaymentAccountController extends Controller
             'client_id' => ['required_if:provider,phonepe_pg', 'nullable', 'string', 'max:150'],
             'client_secret' => ['required_if:provider,phonepe_pg', 'nullable', 'string', 'max:200'],
             'client_version' => ['required_if:provider,phonepe_pg', 'nullable', 'string', 'max:10'],
+            'imap_username' => ['required_if:provider,fampay_email', 'nullable', 'email', 'max:150'],
+            'imap_password' => ['required_if:provider,fampay_email', 'nullable', 'string', 'max:200'],
+            'imap_host' => ['nullable', 'string', Rule::in(FamPayEmailVerifier::ALLOWED_HOSTS)],
+            'imap_port' => ['nullable', 'integer', Rule::in([FamPayEmailVerifier::ALLOWED_PORT])],
+            'imap_sender' => ['nullable', 'string', 'max:150'],
             'environment' => [Rule::requiredIf($hosted), 'nullable', Rule::in(['sandbox', 'production'])],
         ], [
-            'upi_id.regex' => 'Enter a valid UPI ID, e.g. yourname@paytm.',
+            'upi_id.regex' => 'Enter a valid UPI ID, e.g. yourname@paytm or yourname@fam.',
             'upi_id.required' => 'UPI ID is required for this account type.',
             'mid.required_if' => 'Paytm MID is required.',
             'merchant_key.required_if' => 'Paytm Merchant Key is required.',
             'client_id.required_if' => 'PhonePe Client ID is required.',
             'client_secret.required_if' => 'PhonePe Client Secret is required.',
             'client_version.required_if' => 'PhonePe Client Version is required.',
+            'imap_username.required_if' => 'Gmail / IMAP email address is required for FamPay email verification.',
+            'imap_password.required_if' => 'Google App Password / IMAP password is required for FamPay email verification.',
         ]);
 
         $credentials = match ($data['provider']) {
             'paytm_business' => ['mid' => $data['mid']],
+            'fampay_email' => [
+                'imap_username' => $data['imap_username'],
+                'imap_password' => preg_replace('/\s+/', '', (string) $data['imap_password']),
+                'imap_host' => ($data['imap_host'] ?? null) ?: FamPayEmailVerifier::DEFAULT_HOST,
+                'imap_port' => (string) (($data['imap_port'] ?? null) ?: FamPayEmailVerifier::DEFAULT_PORT),
+                'imap_sender' => ($data['imap_sender'] ?? null) ?: FamPayEmailVerifier::DEFAULT_SENDER,
+            ],
             'paytm_pg' => [
                 'mid' => $data['mid'],
                 'merchant_key' => $data['merchant_key'],
@@ -106,6 +121,7 @@ class PaymentAccountController extends Controller
     public function toggle(Request $request, PaymentAccount $account)
     {
         $this->authorizeOwner($request, $account);
+
         $account->update(['is_active' => ! $account->is_active]);
 
         return back()->with('status', $account->is_active ? 'Account enabled.' : 'Account disabled.');
@@ -119,7 +135,6 @@ class PaymentAccountController extends Controller
             $request->user()->paymentAccounts()->update(['is_default' => false]);
             $account->update(['is_default' => true]);
         });
-
         return back()->with('status', 'Default account updated.');
     }
 

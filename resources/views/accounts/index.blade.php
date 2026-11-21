@@ -8,7 +8,7 @@
 @section('content')
 @if ($accounts->isEmpty())
     <div class="card">
-        <x-empty icon="qr" title="No payment accounts yet" text="Connect Paytm for Business, PhonePe PG or Paytm PG for automatic verification, or add any UPI ID.">
+        <x-empty icon="qr" title="No payment accounts yet" text="Connect Paytm for Business, FamPay, PhonePe PG or Paytm PG for automatic verification, or add any UPI ID.">
             <a href="{{ route('accounts.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Add UPI account</a>
         </x-empty>
     </div>
@@ -30,7 +30,7 @@
     <div class="flex gap-2 shrink-0">
         @foreach (\App\Models\User::ROTATION_MODES as $mode => $label)
             <label class="cursor-pointer">
-                <input type="radio" name="rotation_mode" value="{{ $mode }}" class="peer sr-only" @checked($rotation === $mode) data-submit-on-change>
+                <input type="radio" name="rotation_mode" value="{{ $mode }}" class="sr-only" @checked($rotation === $mode) data-submit-on-change>
                 <span class="btn btn-secondary peer-checked:bg-brand-600 peer-checked:text-white peer-checked:ring-brand-600">{{ $label }}</span>
             </label>
         @endforeach
@@ -41,7 +41,7 @@
     @foreach ($accounts as $account)
         @php
             $auto = $account->provider !== 'manual';
-            $icon = ['paytm_business' => 'bolt', 'phonepe_pg' => 'shield', 'paytm_pg' => 'shield'][$account->provider] ?? 'qr';
+            $icon = ['paytm_business' => 'bolt', 'fampay_email' => 'bolt', 'phonepe_pg' => 'shield', 'paytm_pg' => 'shield'][$account->provider] ?? 'qr';
         @endphp
         <div class="card flex flex-col {{ $account->is_active ? '' : 'opacity-70' }}">
             <div class="p-5 flex-1">
@@ -76,6 +76,8 @@
                     <div><dt class="text-slate-500">Verification</dt><dd class="mt-0.5 font-medium {{ $auto ? 'text-sky-700' : 'text-slate-800' }}">{{ $account->isHosted() ? 'Official PG' : ($auto ? 'Automatic' : 'Manual (UTR)') }}</dd></div>
                     @if ($account->provider === 'phonepe_pg')
                         <div><dt class="text-slate-500">Client ID</dt><dd class="mt-0.5 font-mono text-slate-800 truncate">{{ Str::mask($account->credential('client_id') ?? '', '•', 4, -4) }}</dd></div>
+                    @elseif ($account->provider === 'fampay_email')
+                        <div><dt class="text-slate-500">Alert inbox</dt><dd class="mt-0.5 font-mono text-slate-800 truncate">{{ Str::mask($account->credential('imap_username') ?? '', '•', 2, -10) }}</dd></div>
                     @elseif ($account->credential('mid'))
                         <div><dt class="text-slate-500">Paytm MID</dt><dd class="mt-0.5 font-mono text-slate-800">{{ Str::mask($account->credential('mid') ?? '', '•', 4, -4) }}</dd></div>
                     @endif
