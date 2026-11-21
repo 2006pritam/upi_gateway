@@ -11,6 +11,13 @@
         ['Paytm',   'paytmmp://pay',   'text-[#00baf2]', 'images/upi/paytm.png'],
         ['BHIM',    'upi://pay',       'text-[#f47920]', 'images/upi/bhim.png'],
     ];
+    // More apps that open directly on Android phones: [name, Android package, text colour, badge colour, letter]
+    $androidApps = [
+        ['FamPay / FamX', 'com.fampay.in',            'text-[#7c3aed]', 'bg-[#7c3aed]', 'F'],
+        ['Navi',          'com.naviapp',              'text-[#2563eb]', 'bg-[#2563eb]', 'N'],
+        ['super.money',   'money.super.payments',     'text-[#0f766e]', 'bg-[#0f766e]', 'S'],
+    ];
+    $isAndroid = stripos((string) request()->userAgent(), 'android') !== false;
 @endphp
 
 @push('head')
@@ -182,6 +189,11 @@
                                 <img src="{{ asset($logo) }}" class="w-4 h-4 rounded-sm" alt="{{ $name }}">{{ $name }}
                             </span>
                         @endforeach
+                        @foreach ($androidApps as [$name, $package, $color, $badge, $letter])
+                            <span class="rounded-full bg-slate-50 ring-1 ring-slate-200 px-3 py-1 text-xs font-bold {{ $color }} flex items-center gap-1.5">
+                                <span class="w-4 h-4 rounded-sm {{ $badge }} text-white text-[9px] leading-none font-bold grid place-items-center" aria-hidden="true">{{ $letter }}</span>{{ $name }}
+                            </span>
+                        @endforeach
                     </div>
 
                     {{-- On phones, open the UPI app directly --}}
@@ -195,6 +207,15 @@
                                 </a>
                             @endforeach
                         </div>
+                        @if ($isAndroid)
+                            <div class="grid grid-cols-3 gap-2">
+                                @foreach ($androidApps as [$name, $package, $color, $badge, $letter])
+                                    <a href="{{ $order->androidIntentUrl($package) }}" class="btn btn-secondary font-bold {{ $color }} flex items-center justify-center gap-1.5 text-xs px-2">
+                                        <span class="w-5 h-5 rounded-sm {{ $badge }} text-white text-[10px] leading-none font-bold grid place-items-center shrink-0" aria-hidden="true">{{ $letter }}</span><span class="truncate">{{ $name }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
 
                     <div class="mt-6 flex items-center justify-between gap-3 rounded-xl bg-slate-50 ring-1 ring-slate-200 px-4 py-3">

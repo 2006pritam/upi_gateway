@@ -140,6 +140,15 @@ class Order extends Model
         ], '', '&', PHP_QUERY_RFC3986);
     }
 
+    /**
+     * Android "open this specific UPI app" link (works from Chrome on Android; other platforms ignore it).
+     * Same payment details as upiIntentUrl(), just pinned to one app's package name.
+     */
+    public function androidIntentUrl(string $package): string
+    {
+        return 'intent://'.explode('://', $this->upiIntentUrl(), 2)[1].'#Intent;scheme=upi;package='.$package.';end';
+    }
+
     public function paymentUrl(): string
     {
         return $this->environment === self::SANDBOX

@@ -264,4 +264,27 @@ class FamEmailVerificationTest extends TestCase
         $this->order(100);
         $this->assertNull($this->order(100)->payable_amount);
     }
+
+    public function test_android_intent_link_carries_the_payable_amount_for_a_given_app(): void
+    {
+        $this->order(100);
+        $b = $this->order(100);
+        $url = $b->androidIntentUrl('com.fampay.in');
+
+        $this->assertStringStartsWith('intent://pay?pa=ravi%40famg', $url);
+        $this->assertStringContainsString('am=100.01', $url);
+        $this->assertStringEndsWith('#Intent;scheme=upi;package=com.fampay.in;end', $url);
+    }
+
+    public function test_checkout_page_lists_the_extra_apps_and_only_android_gets_direct_buttons(): void
+    {
+        $o = $this->order(100);
+
+        $this->get(route('pay.show', $o))->assertOk()->assertSee('FamPay / FamX')->assertSee('Navi')->assertSee('super.money')
+            ->assertDontSee('package=com.naviapp', false);
+
+        $this->withHeader('User-Agent', 'Mozilla/5.0 (Linux; Android 14) Chrome/120 Mobile')
+            ->get(route('pay.show', $o))->assertOk()
+            ->assertSee('package=com.naviapp;end', false)->assertSee('package=money.super.payments;end', false);
+    }
 }
