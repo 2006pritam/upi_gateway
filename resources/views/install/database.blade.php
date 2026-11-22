@@ -10,7 +10,7 @@
 
     <div>
         <label class="label">App Name</label>
-        <input type="text" name="app_name" value="{{ old('app_name', 'UPI Gateway') }}" class="input" required>
+        <input type="text" name="app_name" value="{{ old('app_name', 'e-Mudra') }}" class="input" required>
     </div>
 
     <div>

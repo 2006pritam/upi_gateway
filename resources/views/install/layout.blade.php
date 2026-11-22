@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Install · {{ config('app.name', 'UPI Gateway') }}</title>
+    <title>Install · {{ config('app.name', 'e-Mudra') }}</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><path d='M18 5 8 18h7l-1 9 10-13h-7z' fill='white'/></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +19,7 @@
         <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center">
             <svg viewBox="0 0 32 32" class="w-6 h-6"><path d="M18 5 8 18h7l-1 9 10-13h-7z" fill="white"/></svg>
         </div>
-        <span class="text-xl font-bold text-slate-900">{{ config('app.name', 'UPI Gateway') }}</span>
+        <span class="text-xl font-bold text-slate-900">{{ config('app.name', 'e-Mudra') }}</span>
     </div>
 
     {{-- Steps --}}
