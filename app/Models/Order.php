@@ -40,6 +40,7 @@ class Order extends Model
         'customer_mobile',
         'note',
         'redirect_url',
+        'payment_link_id',
         'expires_at',
     ];
 

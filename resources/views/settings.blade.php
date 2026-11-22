@@ -126,5 +126,33 @@
             <div class="flex justify-end"><button class="btn btn-primary">Save profile</button></div>
         </form>
     </section>
+    {{-- Alerts --}}
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div>
+            <h2 class="text-base font-semibold text-slate-900">Alerts</h2>
+            <p class="mt-1 text-sm text-slate-500">Get a Telegram message the moment a payment arrives, and an e-mail summary every morning.</p>
+        </div>
+        <div class="card p-6 lg:col-span-2">
+            <form method="POST" action="{{ route('settings.alerts') }}" class="space-y-4">
+                @csrf
+                <ol class="text-sm text-slate-600 list-decimal pl-5 space-y-1">
+                    <li>In Telegram, open <b>@BotFather</b>, send <span class="kbd">/newbot</span> and copy the token.</li>
+                    <li>Open your new bot and press <b>Start</b>.</li>
+                    <li>Send any message to <b>@userinfobot</b> to get your numeric chat ID.</li>
+                </ol>
+                <x-input name="telegram_bot_token" label="Bot token" type="password" autocomplete="off" :value="''" :placeholder="$user->telegram_bot_token ? 'Saved. Paste a new token to replace it' : '123456789:AA...'" class="font-mono" />
+                <x-input name="telegram_chat_id" label="Chat ID" :value="$user->telegram_chat_id" placeholder="e.g. 123456789" class="font-mono" />
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="telegram_alerts" value="1" @checked($user->telegram_alerts)> Send Telegram alerts for payments</label>
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="daily_summary" value="1" @checked($user->daily_summary)> E-mail me a daily summary at 8 AM</label>
+                @error('telegram')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                <div class="flex justify-end gap-2">
+                    <button class="btn btn-primary">Save alerts</button>
+                </div>
+            </form>
+            @if ($user->telegram_bot_token && $user->telegram_chat_id)
+                <form method="POST" action="{{ route('settings.alerts.test') }}" class="mt-3 flex justify-end">@csrf<button class="btn btn-secondary btn-sm">Send test message</button></form>
+            @endif
+        </div>
+    </section>
 </div>
 @endsection

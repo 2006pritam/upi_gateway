@@ -34,6 +34,10 @@ class User extends Authenticatable
         'sandbox_webhook_url',
         'rotation_mode',
         'redirect_domains',
+        'telegram_bot_token',
+        'telegram_chat_id',
+        'telegram_alerts',
+        'daily_summary',
     ];
 
     public const ROTATION_MODES = [
@@ -46,6 +50,7 @@ class User extends Authenticatable
         'remember_token',
         'api_secret',
         'sandbox_api_secret',
+        'telegram_bot_token',
     ];
 
     protected function casts(): array
@@ -56,6 +61,9 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'api_secret' => 'encrypted',
             'sandbox_api_secret' => 'encrypted',
+            'telegram_bot_token' => 'encrypted',
+            'telegram_alerts' => 'boolean',
+            'daily_summary' => 'boolean',
             'redirect_domains' => 'array',
             'api_last_used_at' => 'datetime',
         ];
@@ -77,6 +85,11 @@ class User extends Authenticatable
     public function paymentAccounts(): HasMany
     {
         return $this->hasMany(PaymentAccount::class);
+    }
+
+    public function paymentLinks(): HasMany
+    {
+        return $this->hasMany(PaymentLink::class);
     }
 
     public function orders(): HasMany

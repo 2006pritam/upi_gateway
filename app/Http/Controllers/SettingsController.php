@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\TelegramNotifier;
 use App\Support\SafeUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -25,6 +26,37 @@ class SettingsController extends Controller
         ]));
 
         return back()->with('status', 'Profile updated.');
+    }
+
+    public function updateAlerts(Request $request)
+    {
+        $data = $request->validate([
+            'telegram_bot_token' => ['nullable', 'string', 'regex:'.TelegramNotifier::TOKEN_PATTERN],
+            'telegram_chat_id' => ['nullable', 'string', 'regex:'.TelegramNotifier::CHAT_PATTERN],
+        ], [
+            'telegram_bot_token.regex' => 'That does not look like a bot token (from @BotFather).',
+            'telegram_chat_id.regex' => 'Chat ID must be a number (or @channelname).',
+        ]);
+
+        $user = $request->user();
+        $user->telegram_chat_id = $data['telegram_chat_id'] ?? null;
+        if (! empty($data['telegram_bot_token'])) {
+            $user->telegram_bot_token = $data['telegram_bot_token'];
+        }
+        $user->telegram_alerts = $request->boolean('telegram_alerts') && app(TelegramNotifier::class)->configured($user);
+        $user->daily_summary = $request->boolean('daily_summary');
+        $user->save();
+
+        return back()->with('status', 'Alert settings saved.');
+    }
+
+    public function testTelegram(Request $request, TelegramNotifier $telegram)
+    {
+        $ok = $telegram->send($request->user(), '✅ '.config('app.name').': Telegram alerts are working.');
+
+        return $ok
+            ? back()->with('status', 'Test message sent. Check Telegram.')
+            : back()->withErrors(['telegram' => 'Could not send. Check the bot token and chat ID, and that you pressed Start on your bot.']);
     }
 
     public function updateWebhook(Request $request)

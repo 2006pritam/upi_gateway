@@ -47,4 +47,21 @@ Artisan::command('app:create-admin {email} {--name=Admin}', function (string $em
     $this->info("Admin ready: {$email}");
 })->purpose('Create or promote an admin user');
 
+Artisan::command('reports:daily-summary', function (\App\Services\ReportService $reports) {
+    $day = now()->subDay();
+    $sent = 0;
+    User::where('daily_summary', true)->where('is_active', true)->each(function (User $u) use ($reports, $day, &$sent) {
+        $s = $reports->summary($u, $day, $day);
+        $body = config('app.name').' summary for '.$day->format('d M Y')."\n\n"
+            .'Received: Rs '.number_format($s['paid_total'], 2)." from {$s['paid']} payment(s)\n"
+            ."Orders created: {$s['orders']} (conversion {$s['conversion']}%)\n"
+            ."Still pending: {$s['pending']}, in review: {$s['review']}\n\n"
+            .'Dashboard: '.url('/dashboard');
+        \Illuminate\Support\Facades\Mail::raw($body, fn ($m) => $m->to($u->email)->subject(config('app.name').' daily summary - '.$day->format('d M')));
+        $sent++;
+    });
+    $this->info("Sent {$sent} summaries.");
+})->purpose('E-mail yesterday\'s payment summary to merchants who opted in');
+
+Schedule::command('reports:daily-summary')->dailyAt('08:00')->timezone('Asia/Kolkata');
 Schedule::command('orders:check-pending')->everyMinute()->withoutOverlapping();

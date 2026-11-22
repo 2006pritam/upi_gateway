@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendMerchantAlert;
 use App\Jobs\SendWebhook;
 use App\Models\Order;
 use App\Models\PaymentAccount;
@@ -62,6 +63,7 @@ class OrderService
             'customer_mobile' => $data['customer_mobile'] ?? null,
             'note' => $data['note'] ?? null,
             'redirect_url' => $data['redirect_url'] ?? null,
+            'payment_link_id' => $data['payment_link_id'] ?? null,
             'expires_at' => now()->addMinutes(config('gateway.order_expiry_minutes')),
         ]);
         $order->forceFill(['environment' => $environment]);
@@ -204,10 +206,20 @@ class OrderService
         $order->refresh();
 
         if ($updated) {
-            SendWebhook::dispatch($order, 'order.paid')->afterCommit();
+            $this->dispatchEvent($order, 'order.paid');
         }
 
         return $order;
+    }
+
+    /** Webhook to the merchant's server, plus a Telegram alert for the events they care about. */
+    private function dispatchEvent(Order $order, string $event): void
+    {
+        SendWebhook::dispatch($order, $event)->afterCommit();
+
+        if (in_array($event, ['order.paid', 'order.under_review'], true)) {
+            SendMerchantAlert::dispatch($order, $event)->afterCommit();
+        }
     }
 
     public function expire(Order $order): Order
@@ -260,7 +272,7 @@ class OrderService
         $order->refresh();
 
         if ($updated) {
-            SendWebhook::dispatch($order, 'order.under_review')->afterCommit();
+            $this->dispatchEvent($order, 'order.under_review');
         }
 
         return $order;
@@ -297,7 +309,7 @@ class OrderService
                 'review_note' => null,
             ])->save();
 
-            SendWebhook::dispatch($locked, 'order.paid')->afterCommit();
+            $this->dispatchEvent($locked, 'order.paid');
         });
 
         return $order->refresh();

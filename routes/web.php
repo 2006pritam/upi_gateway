@@ -10,6 +10,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailSetupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaymentLinkController;
+use App\Http\Controllers\PublicLinkController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\PaymentAccountController;
 use App\Http\Controllers\SandboxCheckoutController;
 use App\Http\Controllers\SettingsController;
@@ -38,6 +41,9 @@ Route::post('/pay/{order}/start', [CheckoutController::class, 'start'])->middlew
 Route::match(['get', 'post'], '/pay/{order}/return', [CheckoutController::class, 'return'])->middleware('throttle:30,1')->name('pay.return');
 Route::post('/pay/{order}/utr', [CheckoutController::class, 'submitUtr'])->middleware('throttle:10,1')->name('pay.utr');
 Route::get('/pay/{order}/qr.svg', [CheckoutController::class, 'qr'])->name('pay.qr');
+
+Route::get('/p/{link}', [PublicLinkController::class, 'show'])->name('link.show');
+Route::post('/p/{link}', [PublicLinkController::class, 'pay'])->middleware('throttle:10,1')->name('link.pay');
 
 Route::get('/sandbox/pay/{order}', [SandboxCheckoutController::class, 'show'])
     ->middleware('throttle:60,1')->name('sandbox.pay.show');
@@ -83,6 +89,18 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/orders/{order}/approve-utr', [OrderController::class, 'approveUtr'])->name('orders.approve-utr');
     Route::post('/orders/{order}/reject-utr', [OrderController::class, 'rejectUtr'])->name('orders.reject-utr');
     Route::post('/orders/{order}/mark-paid', [OrderController::class, 'markPaid'])->name('orders.mark-paid');
+
+    Route::get('/links', [PaymentLinkController::class, 'index'])->name('links.index');
+    Route::post('/links', [PaymentLinkController::class, 'store'])->name('links.store');
+    Route::post('/links/{link}/toggle', [PaymentLinkController::class, 'toggle'])->name('links.toggle');
+    Route::delete('/links/{link}', [PaymentLinkController::class, 'destroy'])->name('links.destroy');
+    Route::get('/links/{link}/poster', [PaymentLinkController::class, 'poster'])->name('links.poster');
+
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export.csv', [ReportController::class, 'export'])->name('reports.export');
+
+    Route::post('/settings/alerts', [SettingsController::class, 'updateAlerts'])->name('settings.alerts');
+    Route::post('/settings/alerts/test', [SettingsController::class, 'testTelegram'])->middleware('throttle:5,1')->name('settings.alerts.test');
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
     Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');

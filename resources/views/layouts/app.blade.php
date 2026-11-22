@@ -8,7 +8,9 @@
         'Payments' => [
             ['dashboard', 'Dashboard', 'home', 'dashboard'],
             ['orders.index', 'Orders', 'receipt', 'orders.*'],
+            ['links.index', 'Payment links', 'link', 'links.*'],
             ['accounts.index', 'UPI Accounts', 'qr', 'accounts.*'],
+            ['reports.index', 'Reports', 'chart', 'reports.*'],
         ],
         'Developers' => [
             ['settings', 'API & Webhooks', 'key', 'settings*'],
