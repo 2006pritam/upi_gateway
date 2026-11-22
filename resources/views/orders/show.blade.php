@@ -63,6 +63,29 @@
             </dl>
         </div>
 
+        @if (! $readOnly && $order->status === 'paid' || $order->refunds->isNotEmpty() || $order->risk_level)
+        <div class="card">
+            <div class="card-header"><div class="card-title">Refunds &amp; risk</div><x-risk :order="$order" /></div>
+            <div class="p-5 space-y-4">
+                @if ($order->risk_level)
+                    <ul class="text-sm text-slate-600 list-disc pl-5">@foreach ($order->risk_flags as $f)<li>{{ \App\Services\RiskService::label($f) }}</li>@endforeach</ul>
+                @endif
+                @foreach ($order->refunds as $r)
+                    <div class="flex justify-between text-sm"><span>{{ $r->reason }} <span class="text-slate-400">· {{ $r->created_at->format('d M, h:i A') }}</span></span><span class="tabular-nums font-medium">−₹{{ number_format((float) $r->amount, 2) }}</span></div>
+                @endforeach
+                @if (! $readOnly && $order->refundableAmount() > 0)
+                    <form method="POST" action="{{ route('orders.refund', $order) }}" class="grid sm:grid-cols-5 gap-2 items-end">@csrf
+                        <div class="sm:col-span-1"><label class="label">Amount</label><input name="amount" type="number" step="0.01" min="0.01" max="{{ $order->refundableAmount() }}" value="{{ $order->refundableAmount() }}" class="input" required></div>
+                        <div class="sm:col-span-3"><label class="label">Reason</label><input name="reason" maxlength="200" class="input" placeholder="e.g. Customer cancelled" required></div>
+                        <button class="btn btn-secondary">Record refund</button>
+                        @error('amount')<p class="sm:col-span-5 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </form>
+                    <p class="text-xs text-slate-500">This only records the refund. Send the money back yourself from your UPI app.</p>
+                @endif
+            </div>
+        </div>
+        @endif
+
         <div class="card overflow-hidden">
             <div class="card-header">
                 <div class="card-title">Webhook deliveries</div>
@@ -76,7 +99,7 @@
                 </x-empty>
             @else
                 <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
-                    <thead class="bg-slate-50/70"><tr><th class="th">Event</th><th class="th">Attempt</th><th class="th">Response</th><th class="th">Time</th></tr></thead>
+                    <thead class="bg-slate-50/70"><tr><th class="th">Event</th><th class="th">Attempt</th><th class="th">Response</th><th class="th">Time</th><th class="th"></th></tr></thead>
                     <tbody class="divide-y divide-slate-100">
                     @foreach ($order->webhookLogs->sortByDesc('id') as $log)
                         <tr>
@@ -89,6 +112,7 @@
                                 @if($log->error_label)<div class="text-xs text-slate-400 font-mono">{{ $log->error_label }}</div>@endif
                             </td>
                             <td class="td text-slate-500 whitespace-nowrap">{{ $log->created_at->format('d M, h:i:s A') }}</td>
+                            <td class="td">@unless ($readOnly && $order->environment !== 'sandbox')<form method="POST" action="{{ route('webhooks.resend', $log) }}">@csrf<button class="text-xs text-brand-600 hover:underline">Resend</button></form>@endunless</td>
                         </tr>
                     @endforeach
                     </tbody>

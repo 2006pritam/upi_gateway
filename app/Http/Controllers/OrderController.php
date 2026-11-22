@@ -106,6 +106,21 @@ class OrderController extends Controller
         return back()->with('status', 'Order marked as paid.');
     }
 
+    /** Log that the merchant refunded the customer (money is returned outside the gateway). */
+    public function refund(Request $request, Order $order)
+    {
+        $this->authorizeOwnerOnly($request, $order);
+
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01', 'decimal:0,2'],
+            'reason' => ['required', 'string', 'max:200'],
+        ]);
+
+        $this->orders->refund($order, (float) $data['amount'], $data['reason']);
+
+        return back()->with('status', 'Refund recorded.');
+    }
+
     public function approveUtr(Request $request, Order $order)
     {
         $this->authorizeOwnerOnly($request, $order);

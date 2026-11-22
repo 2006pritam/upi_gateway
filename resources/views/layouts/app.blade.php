@@ -14,6 +14,7 @@
         ],
         'Developers' => [
             ['settings', 'API & Webhooks', 'key', 'settings*'],
+            ['webhooks.index', 'Webhook log', 'bolt', 'webhooks.*'],
             ['docs', 'API Docs', 'book', 'docs'],
         ],
     ];

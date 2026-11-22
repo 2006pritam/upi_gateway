@@ -41,6 +41,7 @@ class Order extends Model
         'note',
         'redirect_url',
         'payment_link_id',
+        'created_ip',
         'expires_at',
     ];
 
@@ -56,6 +57,7 @@ class Order extends Model
             'utr_submitted_at' => 'datetime',
             'provider_checkout' => 'array',
             'sandbox_simulated_at' => 'datetime',
+            'risk_flags' => 'array',
         ];
     }
 
@@ -86,6 +88,23 @@ class Order extends Model
     public function webhookLogs(): HasMany
     {
         return $this->hasMany(WebhookLog::class);
+    }
+
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class);
+    }
+
+    public function refundedAmount(): float
+    {
+        return round((float) $this->refunds()->sum('amount'), 2);
+    }
+
+    public function refundableAmount(): float
+    {
+        return $this->status === self::PAID && $this->environment === self::LIVE
+            ? max(0, round((float) $this->amount - $this->refundedAmount(), 2))
+            : 0.0;
     }
 
     /** The exact amount the customer must pay (price, plus any paise added to make it unique). */

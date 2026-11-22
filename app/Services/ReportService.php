@@ -26,6 +26,7 @@ class ReportService
             'orders' => $orders->count(),
             'paid' => $paid->count(),
             'paid_total' => round((float) $paid->sum('amount'), 2),
+            'refunded' => round((float) \App\Models\Refund::where('user_id', $user->id)->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])->sum('amount'), 2),
             'pending' => $orders->where('status', Order::PENDING)->count(),
             'expired' => $orders->where('status', Order::EXPIRED)->count(),
             'review' => $orders->where('status', Order::REVIEW)->count(),

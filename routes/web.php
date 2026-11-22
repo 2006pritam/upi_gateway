@@ -16,6 +16,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\PaymentAccountController;
 use App\Http\Controllers\SandboxCheckoutController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\WebhookController;
 use App\Http\Middleware\RedirectIfInstalled;
 use Illuminate\Support\Facades\Route;
 
@@ -88,6 +89,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/orders/{order}/recheck', [OrderController::class, 'recheck'])->name('orders.recheck');
     Route::post('/orders/{order}/approve-utr', [OrderController::class, 'approveUtr'])->name('orders.approve-utr');
     Route::post('/orders/{order}/reject-utr', [OrderController::class, 'rejectUtr'])->name('orders.reject-utr');
+    Route::post('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
+    Route::get('/webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
+    Route::post('/webhooks/{log}/resend', [WebhookController::class, 'resend'])->middleware('throttle:20,1')->name('webhooks.resend');
     Route::post('/orders/{order}/mark-paid', [OrderController::class, 'markPaid'])->name('orders.mark-paid');
 
     Route::get('/links', [PaymentLinkController::class, 'index'])->name('links.index');

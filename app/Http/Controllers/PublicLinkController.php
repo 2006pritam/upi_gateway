@@ -35,6 +35,7 @@ class PublicLinkController extends Controller
             'customer_mobile' => $data['customer_mobile'] ?? null,
             'note' => $link->note ?: Str::limit($link->title, 50, ''),
             'payment_link_id' => $link->id,
+            'created_ip' => $request->ip(),
         ]);
 
         return redirect()->route('pay.show', $order);

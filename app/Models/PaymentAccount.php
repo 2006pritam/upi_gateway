@@ -49,6 +49,7 @@ class PaymentAccount extends Model
             'is_active' => 'boolean',
             'is_default' => 'boolean',
             'daily_limit' => 'decimal:2',
+            'unhealthy_until' => 'datetime',
         ];
     }
 
@@ -77,6 +78,32 @@ class PaymentAccount extends Model
     public function canAccept(float $amount): bool
     {
         return $this->daily_limit === null || $this->usedToday() + $amount <= (float) $this->daily_limit;
+    }
+
+    public const FAILURE_LIMIT = 5;
+
+    public const COOLDOWN_MINUTES = 10;
+
+    /** False while the account is cooling down after repeated provider errors. */
+    public function isHealthy(): bool
+    {
+        return $this->unhealthy_until === null || $this->unhealthy_until->isPast();
+    }
+
+    public function recordCheckFailure(): void
+    {
+        $count = $this->failure_count + 1;
+        $this->forceFill([
+            'failure_count' => $count,
+            'unhealthy_until' => $count >= self::FAILURE_LIMIT ? now()->addMinutes(self::COOLDOWN_MINUTES) : $this->unhealthy_until,
+        ])->saveQuietly();
+    }
+
+    public function recordCheckSuccess(): void
+    {
+        if ($this->failure_count > 0 || $this->unhealthy_until !== null) {
+            $this->forceFill(['failure_count' => 0, 'unhealthy_until' => null])->saveQuietly();
+        }
     }
 
     public function user(): BelongsTo

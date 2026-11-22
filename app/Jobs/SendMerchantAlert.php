@@ -37,6 +37,10 @@ class SendMerchantAlert implements ShouldQueue
             default => null,
         };
 
+        if ($text !== null && in_array($order->risk_level, ['medium', 'high'], true)) {
+            $text .= "\n⚠ ".ucfirst($order->risk_level).' risk: '.collect($order->risk_flags)->map(fn ($f) => \App\Services\RiskService::label($f))->implode('; ');
+        }
+
         if ($text !== null && ! $telegram->send($merchant, $text)) {
             $this->fail(new \RuntimeException('Telegram send failed'));
         }

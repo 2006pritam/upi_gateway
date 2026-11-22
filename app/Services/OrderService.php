@@ -64,13 +64,14 @@ class OrderService
             'note' => $data['note'] ?? null,
             'redirect_url' => $data['redirect_url'] ?? null,
             'payment_link_id' => $data['payment_link_id'] ?? null,
+            'created_ip' => $data['created_ip'] ?? null,
             'expires_at' => now()->addMinutes(config('gateway.order_expiry_minutes')),
         ]);
         $order->forceFill(['environment' => $environment]);
         $order->user()->associate($merchant);
         $order->save();
 
-        return $order;
+        return app(RiskService::class)->assess($order);
     }
 
     /**
@@ -149,6 +150,13 @@ class OrderService
         if ($claimed) {
             $result = $order->paymentAccount->verifier()->check($order);
 
+            // Provider errors come back as "pending + error". Track them so a broken account stops receiving new orders.
+            if (! $result->paid && isset($result->raw['error'])) {
+                $order->paymentAccount->recordCheckFailure();
+            } else {
+                $order->paymentAccount->recordCheckSuccess();
+            }
+
             if ($result->paid) {
                 return $this->markPaid($order, $result->utr, $result->txnId, $result->raw, 'provider');
             }
@@ -215,6 +223,7 @@ class OrderService
     /** Webhook to the merchant's server, plus a Telegram alert for the events they care about. */
     private function dispatchEvent(Order $order, string $event): void
     {
+        app(RiskService::class)->assess($order);
         SendWebhook::dispatch($order, $event)->afterCommit();
 
         if (in_array($event, ['order.paid', 'order.under_review'], true)) {
@@ -349,6 +358,21 @@ class OrderService
         return $order;
     }
 
+    /** Record that money went back to the customer (the merchant did the transfer outside the gateway). */
+    public function refund(Order $order, float $amount, string $reason): \App\Models\Refund
+    {
+        return DB::transaction(function () use ($order, $amount, $reason) {
+            User::whereKey($order->user_id)->lockForUpdate()->firstOrFail();
+            $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($amount < 0.01 || $amount > $locked->refundableAmount() + 0.0001) {
+                throw ValidationException::withMessages(['amount' => 'Refund must be between ₹0.01 and ₹'.number_format($locked->refundableAmount(), 2).'.']);
+            }
+
+            return $locked->refunds()->create(['user_id' => $locked->user_id, 'amount' => round($amount, 2), 'reason' => $reason]);
+        });
+    }
+
     /**
      * A UTR identifies one bank transfer, so it may back only one order per merchant.
      */
@@ -448,6 +472,12 @@ class OrderService
     private function resolveAccount(User $merchant, float $amount, ?int $accountId): PaymentAccount
     {
         $accounts = $merchant->paymentAccounts()->where('is_active', true)->withUsageToday()->get();
+
+        // Automatic fallback: skip accounts that keep failing, unless every account is failing.
+        $healthy = $accounts->filter->isHealthy();
+        if ($healthy->isNotEmpty()) {
+            $accounts = $healthy->values();
+        }
 
         // Validate that an explicit account ID actually belongs to this merchant
         // (IDOR guard). Use the already-loaded active collection first; only fire

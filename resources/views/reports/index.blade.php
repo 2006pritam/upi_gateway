@@ -11,8 +11,8 @@
     <button type="button" onclick="window.print()" class="btn btn-secondary">Print / PDF</button>
 </form>
 
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    @foreach ([['Received', '₹'.number_format($summary['paid_total'], 2)], ['Paid orders', $summary['paid']], ['Orders created', $summary['orders']], ['Conversion', $summary['conversion'].'%']] as [$label, $value])
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    @foreach ([['Received', '₹'.number_format($summary['paid_total'], 2)], ['Refunded', '₹'.number_format($summary['refunded'], 2)], ['Paid orders', $summary['paid']], ['Orders created', $summary['orders']], ['Conversion', $summary['conversion'].'%']] as [$label, $value])
         <div class="card p-5"><div class="text-xs uppercase tracking-wider text-slate-500">{{ $label }}</div><div class="mt-1 text-2xl font-bold text-slate-900 tabular-nums">{{ $value }}</div></div>
     @endforeach
 </div>

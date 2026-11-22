@@ -31,7 +31,7 @@ class SendWebhook implements ShouldQueue
 
     public int $tries = 6;
 
-    public function __construct(public Order $order, public string $event) {}
+    public function __construct(public Order $order, public string $event, public bool $force = false) {}
 
     public function backoff(): array
     {
@@ -57,7 +57,7 @@ class SendWebhook implements ShouldQueue
         // ── Idempotency: skip if a successful delivery already exists ──────────
         // Prevents double-delivery when the queue retries after a worker crash
         // that occurred after the HTTP call succeeded but before job deletion.
-        if ($this->order->webhookLogs()
+        if (! $this->force && $this->order->webhookLogs()
             ->where('event', $this->event)
             ->where('success', true)
             ->exists()) {

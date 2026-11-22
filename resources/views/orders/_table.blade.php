@@ -28,7 +28,7 @@
                     @isset($showMerchant)<td class="td text-slate-700">{{ $order->user->displayName() }}</td>@endisset
                     <td class="td text-slate-600">{{ $order->customer_name ?: ($order->customer_mobile ?: '—') }}</td>
                     <td class="td text-right font-semibold text-slate-900 tabular-nums">₹{{ number_format($order->amount, 2) }}</td>
-                    <td class="td"><x-status :status="$order->status" /></td>
+                    <td class="td"><x-status :status="$order->status" /> <x-risk :order="$order" /></td>
                     <td class="td font-mono text-xs text-slate-600">
                         @if ($order->status === 'review')
                             {{ $order->customer_utr }}<div class="font-sans text-[11px] text-sky-600">submitted by customer</div>
