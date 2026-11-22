@@ -87,6 +87,11 @@ class User extends Authenticatable
         return $this->hasMany(PaymentAccount::class);
     }
 
+    public function apiKeys(): HasMany
+    {
+        return $this->hasMany(ApiKey::class);
+    }
+
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);

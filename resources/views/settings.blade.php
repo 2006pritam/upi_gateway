@@ -126,6 +126,67 @@
             <div class="flex justify-end"><button class="btn btn-primary">Save profile</button></div>
         </form>
     </section>
+    {{-- Named API keys --}}
+    @php $namedKeys = $user->apiKeys()->orderByRaw('revoked_at is not null')->latest('id')->get(); @endphp
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div>
+            <h2 class="text-base font-semibold text-slate-900">API keys by website</h2>
+            <p class="mt-1 text-sm text-slate-500">Create a separate key and secret for each website or app. Revoking one never affects the others. Webhooks for a key are signed with that key's own secret.</p>
+        </div>
+        <div class="card p-6 lg:col-span-2 space-y-5">
+            @if (session('new_api_key_encrypted'))
+                @php $nk = json_decode(Crypt::decryptString(session('new_api_key_encrypted')), true); @endphp
+                <div class="rounded-lg bg-amber-50 p-4 ring-1 ring-amber-300 space-y-3">
+                    <div class="text-sm font-semibold text-amber-900">New key: {{ $nk['name'] }}</div>
+                    <div><label class="label">API key</label><div class="flex gap-2"><input readonly value="{{ $nk['key'] }}" class="input font-mono bg-white"><x-copy :text="$nk['key']" /></div></div>
+                    <div><label class="label">API secret · shown once</label><div class="flex gap-2"><input readonly value="{{ $nk['secret'] }}" class="input font-mono bg-white"><x-copy :text="$nk['secret']" /></div>
+                        <p class="mt-2 text-xs font-medium text-amber-800">Copy this now. It cannot be shown again.</p></div>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('api-keys.store') }}" class="grid sm:grid-cols-6 gap-3 items-end">
+                @csrf
+                <div class="sm:col-span-3"><label class="label">Website / app name</label><input name="name" value="{{ old('name') }}" maxlength="60" required class="input" placeholder="e.g. Academy website"></div>
+                <div class="sm:col-span-2"><label class="label">Type</label><select name="environment" class="input"><option value="live">Live</option><option value="sandbox">Sandbox (test)</option></select></div>
+                <button class="btn btn-primary sm:col-span-1">Create</button>
+                <div class="sm:col-span-6"><label class="label">Webhook URL for this site <span class="text-slate-400 font-normal">(optional)</span></label><input name="webhook_url" value="{{ old('webhook_url') }}" maxlength="500" class="input font-mono" placeholder="https://yoursite.com/payment-webhook"></div>
+                @error('name')<p class="sm:col-span-6 text-sm text-red-600">{{ $message }}</p>@enderror
+                @error('webhook_url')<p class="sm:col-span-6 text-sm text-red-600">{{ $message }}</p>@enderror
+            </form>
+
+            <div class="divide-y divide-slate-100 rounded-lg ring-1 ring-slate-200">
+                <div class="px-4 py-3 flex items-center justify-between gap-3 bg-slate-50/60">
+                    <div><div class="text-sm font-medium text-slate-900">Default key <span class="badge bg-slate-100 text-slate-600">Live</span></div><div class="text-xs text-slate-500 font-mono">{{ $user->api_key }}</div></div>
+                    <span class="text-xs text-slate-400">Shown above</span>
+                </div>
+                @forelse ($namedKeys as $k)
+                    <div class="px-4 py-3 space-y-2 {{ $k->isActive() ? '' : 'opacity-60' }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="text-sm font-medium text-slate-900 truncate">{{ $k->name }}
+                                    <span class="badge {{ $k->environment === 'sandbox' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-50 text-emerald-700' }}">{{ ucfirst($k->environment) }}</span>
+                                    @unless ($k->isActive())<span class="badge bg-slate-100 text-slate-500">Revoked</span>@endunless</div>
+                                <div class="text-xs text-slate-500 font-mono truncate">{{ $k->key }}</div>
+                                <div class="text-xs text-slate-400">{{ $k->last_used_at ? 'Last used '.$k->last_used_at->diffForHumans() : 'Never used' }}</div>
+                            </div>
+                            @if ($k->isActive())
+                                <form method="POST" action="{{ route('api-keys.destroy', $k) }}">@csrf @method('DELETE')<button data-confirm="Revoke this key? Requests using it will fail immediately." class="btn btn-danger btn-sm">Revoke</button></form>
+                            @endif
+                        </div>
+                        @if ($k->isActive())
+                            <form method="POST" action="{{ route('api-keys.update', $k) }}" class="flex gap-2">@csrf
+                                <input name="webhook_url" value="{{ $k->webhook_url }}" maxlength="500" class="input font-mono text-xs" placeholder="Webhook URL (blank = use the main webhook URL)">
+                                <button class="btn btn-secondary btn-sm">Save</button>
+                            </form>
+                        @endif
+                    </div>
+                @empty
+                    <div class="px-4 py-4 text-sm text-slate-500">No extra keys yet. Create one for each website above.</div>
+                @endforelse
+            </div>
+        </div>
+    </section>
+
     {{-- Alerts --}}
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div>

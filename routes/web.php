@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\TransactionDebuggerController;
+use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChangePasswordController;
 use App\Http\Controllers\CheckoutController;
@@ -124,6 +125,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/settings/sandbox/revoke-keys', [SettingsController::class, 'revokeSandboxKeys'])->name('settings.sandbox.revoke');
     Route::post('/settings/rotation', [SettingsController::class, 'updateRotation'])->name('settings.rotation');
     Route::post('/settings/redirect-domains', [SettingsController::class, 'updateRedirectDomains'])->name('settings.redirect-domains');
+    Route::post('/settings/api-keys', [ApiKeyController::class, 'store'])->middleware('throttle:20,1')->name('api-keys.store');
+    Route::post('/settings/api-keys/{apiKey}', [ApiKeyController::class, 'update'])->name('api-keys.update');
+    Route::delete('/settings/api-keys/{apiKey}', [ApiKeyController::class, 'destroy'])->name('api-keys.destroy');
     Route::post('/settings/regenerate-keys', [SettingsController::class, 'regenerateKeys'])->name('settings.regenerate');
 
     // Password change — uses Auth::logoutOtherDevices to sign out other sessions.

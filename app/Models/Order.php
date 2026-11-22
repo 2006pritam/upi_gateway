@@ -42,6 +42,7 @@ class Order extends Model
         'redirect_url',
         'payment_link_id',
         'created_ip',
+        'api_key_id',
         'expires_at',
     ];
 
@@ -88,6 +89,11 @@ class Order extends Model
     public function webhookLogs(): HasMany
     {
         return $this->hasMany(WebhookLog::class);
+    }
+
+    public function apiKey(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(ApiKey::class);
     }
 
     public function refunds(): HasMany

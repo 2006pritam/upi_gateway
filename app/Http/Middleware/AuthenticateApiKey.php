@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ApiKey;
 use App\Models\Order;
 use App\Models\User;
 use Closure;
@@ -31,10 +32,24 @@ class AuthenticateApiKey
         $secret = (string) $request->header('X-Api-Secret');
 
         $environment = str_starts_with($key, 'test_key_') ? Order::SANDBOX : Order::LIVE;
-        $keyColumn = $environment === Order::SANDBOX ? 'sandbox_api_key' : 'api_key';
-        $secretColumn = $environment === Order::SANDBOX ? 'sandbox_api_secret' : 'api_secret';
-        $merchant = $key !== '' ? User::where($keyColumn, $key)->first() : null;
-        $expectedSecret = $merchant?->{$secretColumn};
+        $apiKey = null;
+        $merchant = null;
+        $expectedSecret = null;
+
+        if ($key !== '') {
+            // Named keys first; the merchant's original keys (users table) keep working as the "Default key".
+            $apiKey = ApiKey::where('key', $key)->whereNull('revoked_at')->with('user')->first();
+            if ($apiKey) {
+                $merchant = $apiKey->user;
+                $environment = $apiKey->environment;
+                $expectedSecret = $apiKey->secret;
+            } else {
+                $keyColumn = $environment === Order::SANDBOX ? 'sandbox_api_key' : 'api_key';
+                $secretColumn = $environment === Order::SANDBOX ? 'sandbox_api_secret' : 'api_secret';
+                $merchant = User::where($keyColumn, $key)->first();
+                $expectedSecret = $merchant?->{$secretColumn};
+            }
+        }
 
         if (! $merchant || ! $expectedSecret || ! hash_equals($expectedSecret, $secret)) {
             return response()->json(['message' => 'Invalid API key or secret.'], 401)
@@ -48,12 +63,13 @@ class AuthenticateApiKey
 
         $request->setUserResolver(fn () => $merchant);
         $request->attributes->set('payment_environment', $environment);
+        $request->attributes->set('api_key_id', $apiKey?->id);
 
         // ── Per-key throttle ──────────────────────────────────────────────────
         $keyLimit = (int) config('gateway.api_key_rate_limit', 120);
-        $keyBucket = $environment === Order::LIVE
-            ? 'api-key:'.$merchant->id
-            : 'api-key:sandbox:'.$merchant->id;
+        $keyBucket = $apiKey
+            ? 'api-key:k'.$apiKey->id
+            : ($environment === Order::LIVE ? 'api-key:'.$merchant->id : 'api-key:sandbox:'.$merchant->id);
 
         if (RateLimiter::tooManyAttempts($keyBucket, $keyLimit)) {
             return response()->json(['message' => 'Rate limit exceeded for this API key.'], 429)
@@ -76,15 +92,16 @@ class AuthenticateApiKey
         RateLimiter::hit($ipBucket, 60);
 
         // ── Track last_used_at / last_used_ip (at most once per minute) ────────
-        $trackKey = $environment === Order::LIVE
-            ? 'api_track:'.$merchant->id
-            : 'api_track:sandbox:'.$merchant->id;
+        $trackKey = $apiKey
+            ? 'api_track:k'.$apiKey->id
+            : ($environment === Order::LIVE ? 'api_track:'.$merchant->id : 'api_track:sandbox:'.$merchant->id);
         if (! app('cache')->has($trackKey)) {
             app('cache')->put($trackKey, 1, 60);
-            DB::table('users')->where('id', $merchant->id)->update([
-                'api_last_used_at' => now(),
-                'api_last_used_ip' => $request->ip(),
-            ]);
+            DB::table($apiKey ? 'api_keys' : 'users')->where('id', $apiKey?->id ?? $merchant->id)->update(
+                $apiKey
+                    ? ['last_used_at' => now(), 'last_used_ip' => $request->ip()]
+                    : ['api_last_used_at' => now(), 'api_last_used_ip' => $request->ip()]
+            );
         }
 
         $response = $next($request);

@@ -65,6 +65,7 @@ class OrderService
             'redirect_url' => $data['redirect_url'] ?? null,
             'payment_link_id' => $data['payment_link_id'] ?? null,
             'created_ip' => $data['created_ip'] ?? null,
+            'api_key_id' => $data['api_key_id'] ?? null,
             'expires_at' => now()->addMinutes((int) ($data['expiry_minutes'] ?? config('gateway.order_expiry_minutes'))),
         ]);
         $order->forceFill(['environment' => $environment]);

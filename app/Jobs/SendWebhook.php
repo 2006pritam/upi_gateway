@@ -45,11 +45,19 @@ class SendWebhook implements ShouldQueue
         $webhookUrl = $sandbox ? $merchant->sandbox_webhook_url : $merchant->webhook_url;
         $signingSecret = $sandbox ? $merchant->sandbox_api_secret : $merchant->api_secret;
 
+        // Orders created with a named key notify that key's own URL (if set) and are signed with that key's secret,
+        // so each website verifies webhooks with the secret it already holds.
+        $apiKey = $this->order->api_key_id ? $this->order->apiKey : null;
+        if ($apiKey) {
+            $webhookUrl = $apiKey->webhook_url ?: $webhookUrl;
+            $signingSecret = $apiKey->secret;
+        }
+
         if (! $webhookUrl || ! $signingSecret) {
             return;
         }
 
-        if ($sandbox && $merchant->webhook_url
+        if ($sandbox && $merchant->webhook_url && $webhookUrl
             && hash_equals(rtrim($merchant->webhook_url, '/'), rtrim($webhookUrl, '/'))) {
             return;
         }

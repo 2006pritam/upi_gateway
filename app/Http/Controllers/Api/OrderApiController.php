@@ -40,6 +40,7 @@ class OrderApiController extends Controller
             $this->validateRedirectUrl($merchant, $data['redirect_url']);
         }
 
+        $data['api_key_id'] = $request->attributes->get('api_key_id');
         $order = $this->orders->create($merchant, $data, $environment);
 
         return response()->json(['success' => true, 'data' => $order->toApiArray()], 201);

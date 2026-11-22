@@ -10,6 +10,7 @@
     $details = [
         'Order ID' => [$order->order_no, true],
         'Your reference' => [$order->client_order_id, true],
+        'Created via' => [$order->apiKey?->name ?? ($order->payment_link_id ? 'Payment link' : 'Dashboard / default key'), false],
         'Environment' => [strtoupper($order->environment).($order->environment === 'sandbox' ? ' · TEST ONLY' : ''), false],
         'Payment account' => [$order->paymentAccount ? $order->paymentAccount->label.' · '.($order->paymentAccount->upi_id ?? $order->paymentAccount->providerLabel()) : 'Internal TEST simulator', false],
         'Verification' => [$order->paymentAccount?->providerLabel() ?? 'Sandbox simulation', false],
