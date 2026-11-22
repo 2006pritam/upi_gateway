@@ -90,7 +90,8 @@
                             @if ($order->utr)<div class="flex justify-between px-4 py-3"><dt class="text-slate-500">UTR</dt><dd class="font-mono font-medium text-slate-900">{{ $order->utr }}</dd></div>@endif
                             <div class="flex justify-between px-4 py-3"><dt class="text-slate-500">Paid at</dt><dd class="font-medium text-slate-900">{{ $order->paid_at?->format('d M Y, h:i A') }}</dd></div>
                         </dl>
-                        <p class="mt-6 text-xs text-slate-400">You can safely close this page.</p>
+                        <a href="{{ route('pay.receipt', $order) }}" target="_blank" class="mt-6 btn btn-secondary btn-sm"><x-icon name="receipt" class="w-4 h-4" /> Download receipt</a>
+                        <p class="mt-4 text-xs text-slate-400">You can safely close this page.</p>
                     </div>
                 @elseif ($order->status === 'review')
                     <div class="flex-1 flex flex-col items-center justify-center text-center py-8">
@@ -202,7 +203,7 @@
                         <a href="{{ $order->upiIntentUrl() }}" class="btn btn-primary btn-lg w-full"><x-icon name="phone" class="w-5 h-5" /> Pay ₹{{ $amount }} with UPI app</a>
                         <div class="grid grid-cols-3 gap-2">
                             @foreach (array_slice($apps, 0, 3) as [$name, $scheme, $color, $logo])
-                                <a href="{{ $order->upiIntentUrl($scheme) }}" class="btn btn-secondary font-bold {{ $color }} flex items-center justify-center gap-1.5">
+                                <a data-upi-app="{{ $name }}" href="{{ $order->upiIntentUrl($scheme) }}" class="btn btn-secondary font-bold {{ $color }} flex items-center justify-center gap-1.5">
                                     <img src="{{ asset($logo) }}" class="w-5 h-5 rounded-sm" alt="{{ $name }}">{{ $name }}
                                 </a>
                             @endforeach
@@ -210,7 +211,7 @@
                         @if ($isAndroid)
                             <div class="grid grid-cols-3 gap-2">
                                 @foreach ($androidApps as [$name, $package, $color, $badge, $letter])
-                                    <a href="{{ $order->androidIntentUrl($package) }}" class="btn btn-secondary font-bold {{ $color }} flex items-center justify-center gap-1.5 text-xs px-2">
+                                    <a data-upi-app="{{ $name }}" href="{{ $order->androidIntentUrl($package) }}" class="btn btn-secondary font-bold {{ $color }} flex items-center justify-center gap-1.5 text-xs px-2">
                                         <span class="w-5 h-5 rounded-sm {{ $badge }} text-white text-[10px] leading-none font-bold grid place-items-center shrink-0" aria-hidden="true">{{ $letter }}</span><span class="truncate">{{ $name }}</span>
                                     </a>
                                 @endforeach
@@ -259,6 +260,19 @@
     const timer = document.getElementById('timer');
     const ring = document.getElementById('ring');
     const statusUrl = @json(route('pay.status', $order));
+
+    // Remember the UPI app the customer used last time and put it first.
+    try {
+        const links = document.querySelectorAll('[data-upi-app]');
+        const last = localStorage.getItem('emudra_last_app');
+        links.forEach(a => a.addEventListener('click', () => { try { localStorage.setItem('emudra_last_app', a.dataset.upiApp); } catch (e) {} }));
+        const hit = last && [...links].find(a => a.dataset.upiApp === last);
+        if (hit) {
+            hit.parentElement.prepend(hit);
+            hit.classList.add('ring-2', 'ring-brand-500');
+            hit.insertAdjacentHTML('beforeend', '<span class="text-[10px] font-semibold text-brand-600">· last used</span>');
+        }
+    } catch (e) {}
 
     const tick = () => {
         if (!timer) return;

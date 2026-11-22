@@ -62,6 +62,29 @@ class OrderApiController extends Controller
     }
 
     /**
+     * Sandbox only: pretend the customer paid (or failed, expired...) so you can test your webhook
+     * handling without opening the checkout page. Live keys get a 403.
+     */
+    public function simulate(Request $request, string $orderNo)
+    {
+        if ($request->attributes->get('payment_environment', Order::LIVE) !== Order::SANDBOX) {
+            return response()->json(['success' => false, 'message' => 'Simulation is only available with sandbox (test) API keys.'], 403);
+        }
+
+        $data = $request->validate([
+            'outcome' => ['nullable', Rule::in(['success', 'failed', 'pending', 'expired', 'timeout'])],
+        ]);
+
+        $order = $request->user()->orders()->where('environment', Order::SANDBOX)
+            ->where(fn ($q) => $q->where('order_no', $orderNo)->orWhere('client_order_id', $orderNo))
+            ->firstOrFail();
+
+        $order = $this->orders->simulateSandbox($order, $data['outcome'] ?? 'success');
+
+        return response()->json(['success' => true, 'data' => $order->toApiArray()]);
+    }
+
+    /**
      * Validate that the redirect URL's host is in the merchant's allowlist.
      *
      * @throws ValidationException

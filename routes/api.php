@@ -19,4 +19,5 @@ Route::prefix('v1')->middleware(['api.key'])->group(function () {
     Route::get('accounts', [AccountApiController::class, 'index']);
     Route::post('orders', [OrderApiController::class, 'store']);
     Route::get('orders/{orderNo}', [OrderApiController::class, 'show']);
+    Route::post('orders/{orderNo}/simulate', [OrderApiController::class, 'simulate']);
 });

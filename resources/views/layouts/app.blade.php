@@ -10,6 +10,8 @@
             ['orders.index', 'Orders', 'receipt', 'orders.*'],
             ['links.index', 'Payment links', 'link', 'links.*'],
             ['accounts.index', 'UPI Accounts', 'qr', 'accounts.*'],
+            ['subscriptions.index', 'Subscriptions', 'refresh', 'subscriptions.*'],
+            ['earnings.index', 'Earnings', 'banknotes', 'earnings.*'],
             ['reports.index', 'Reports', 'chart', 'reports.*'],
         ],
         'Developers' => [

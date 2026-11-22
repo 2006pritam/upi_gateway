@@ -44,10 +44,10 @@
             <nav class="sticky top-24 space-y-6 text-sm" id="docs-nav">
                 @foreach ([
                     'Getting Started' => ['intro' => 'Introduction', 'auth' => 'Live authentication', 'sandbox' => 'Sandbox authentication'],
-                    'Orders' => ['create' => 'Create payment order', 'status' => 'Check order status', 'object' => 'Response fields'],
+                    'Orders' => ['create' => 'Create payment order', 'status' => 'Check order status', 'simulate' => 'Simulate (sandbox)', 'object' => 'Response fields'],
                     'UPI Accounts' => ['accounts' => 'List accounts', 'rotation' => 'Rotation & limits'],
                     'Webhooks' => ['webhooks' => 'Events', 'verify' => 'Verify signature'],
-                    'Reference' => ['errors' => 'Error codes', 'sdks' => 'Code examples'],
+                    'Reference' => ['errors' => 'Error codes', 'sdks' => 'Code examples', 'plugins' => 'Plugins & helpers'],
                 ] as $group => $links)
                     <div>
                         <div class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2 px-3">{{ $group }}</div>
@@ -253,6 +253,13 @@ Content-Type: application/json"])
             </section>
 
             {{-- Order Object --}}
+            <section id="simulate" class="section-anchor">
+                <h2 class="text-2xl font-bold tracking-tight text-slate-900">Simulate a payment (sandbox)</h2>
+                <p class="mt-3 text-slate-600">Test your webhook handler without paying: with <b>sandbox keys</b>, mark a test order as paid in one call. Live keys get <code class="kbd">403</code>.</p>
+                @include('docs._code', ['title' => 'cURL', 'lang' => 'bash', 'code' => "curl -X POST {$exampleBase}/orders/TEST_ORDER_ID/simulate \\\n  -H \"X-Api-Key: test_key_placeholder\" -H \"X-Api-Secret: test_secret_placeholder\" \\\n  -d outcome=success"])
+                <p class="mt-3 text-sm text-slate-500"><code class="kbd">outcome</code>: <code class="kbd">success</code> (default), <code class="kbd">failed</code>, <code class="kbd">expired</code>, <code class="kbd">pending</code>, <code class="kbd">timeout</code>. The matching webhook is sent.</p>
+            </section>
+
             <section id="object" class="section-anchor">
                 <h2 class="text-2xl font-bold tracking-tight text-slate-900">API response fields</h2>
                 <p class="mt-3 text-slate-600">An order moves through these statuses:</p>
@@ -511,6 +518,16 @@ Content-Type: application/json"])
                 ]);
                 @endphp
                 @include('docs._code', ['title' => 'PHP (Guzzle)', 'lang' => 'php', 'code' => $guzzleCode])
+            </section>
+
+            <section id="plugins" class="section-anchor">
+                <h2 class="text-2xl font-bold tracking-tight text-slate-900">Plugins &amp; helpers</h2>
+                <p class="mt-3 text-slate-600">Ready-made integrations, so you don't write the API calls yourself.</p>
+                <ul class="mt-4 space-y-3">
+                    <li><a class="text-brand-600 font-medium" href="{{ route('integrations.download', 'woocommerce') }}">WooCommerce / WordPress plugin</a><span class="text-slate-500"> — copy to <code class="kbd">wp-content/plugins/emudra-gateway/</code>, activate, then WooCommerce → Settings → Payments → {{ config('app.name') }}. Enter this site's URL, your API key and secret, and set the webhook URL shown in the plugin.</span></li>
+                    <li><a class="text-brand-600 font-medium" href="{{ route('integrations.download', 'php') }}">PHP helper</a><span class="text-slate-500"> — one file: <code class="kbd">createOrder()</code>, <code class="kbd">getOrder()</code> and <code class="kbd">verifyWebhook()</code>.</span></li>
+                    <li><a class="text-brand-600 font-medium" href="{{ route('integrations.download', 'node') }}">Node.js helper</a><span class="text-slate-500"> — same three functions, no dependencies (Node 18+).</span></li>
+                </ul>
             </section>
 
         </article>

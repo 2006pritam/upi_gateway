@@ -65,7 +65,7 @@ class OrderService
             'redirect_url' => $data['redirect_url'] ?? null,
             'payment_link_id' => $data['payment_link_id'] ?? null,
             'created_ip' => $data['created_ip'] ?? null,
-            'expires_at' => now()->addMinutes(config('gateway.order_expiry_minutes')),
+            'expires_at' => now()->addMinutes((int) ($data['expiry_minutes'] ?? config('gateway.order_expiry_minutes'))),
         ]);
         $order->forceFill(['environment' => $environment]);
         $order->user()->associate($merchant);

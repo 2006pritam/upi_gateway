@@ -146,6 +146,15 @@ class CheckoutController extends Controller
         return redirect()->route('pay.show', $order);
     }
 
+    /** Printable receipt for a paid order. */
+    public function receipt(Order $order)
+    {
+        $this->assertLive($order);
+        abort_unless($order->status === Order::PAID, 404);
+
+        return view('receipt', ['order' => $order->load('user', 'paymentAccount')]);
+    }
+
     public function qr(Order $order)
     {
         $this->assertLive($order);

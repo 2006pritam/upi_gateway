@@ -7,6 +7,8 @@ use App\Http\Controllers\ChangePasswordController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ConfirmPasswordController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EarningsController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\EmailSetupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\OrderController;
@@ -34,6 +36,7 @@ Route::middleware(RedirectIfInstalled::class)->prefix('install')->name('install.
 
 Route::view('/', 'welcome')->name('home');
 Route::view('/docs', 'docs')->name('docs');
+Route::get('/integrations/{kind}', [\App\Http\Controllers\IntegrationDownloadController::class, 'show'])->whereIn('kind', ['woocommerce', 'php', 'node'])->name('integrations.download');
 
 // ── Public checkout pages ─────────────────────────────────────────────────────
 Route::get('/pay/{order}', [CheckoutController::class, 'show'])->name('pay.show');
@@ -41,6 +44,7 @@ Route::get('/pay/{order}/status', [CheckoutController::class, 'status'])->middle
 Route::post('/pay/{order}/start', [CheckoutController::class, 'start'])->middleware('throttle:20,1')->name('pay.start');
 Route::match(['get', 'post'], '/pay/{order}/return', [CheckoutController::class, 'return'])->middleware('throttle:30,1')->name('pay.return');
 Route::post('/pay/{order}/utr', [CheckoutController::class, 'submitUtr'])->middleware('throttle:10,1')->name('pay.utr');
+Route::get('/pay/{order}/receipt', [CheckoutController::class, 'receipt'])->middleware('throttle:30,1')->name('pay.receipt');
 Route::get('/pay/{order}/qr.svg', [CheckoutController::class, 'qr'])->name('pay.qr');
 
 Route::get('/p/{link}', [PublicLinkController::class, 'show'])->name('link.show');
@@ -99,6 +103,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/links/{link}/toggle', [PaymentLinkController::class, 'toggle'])->name('links.toggle');
     Route::delete('/links/{link}', [PaymentLinkController::class, 'destroy'])->name('links.destroy');
     Route::get('/links/{link}/poster', [PaymentLinkController::class, 'poster'])->name('links.poster');
+
+    Route::get('/subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
+    Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store');
+    Route::post('/subscriptions/{subscription}', [SubscriptionController::class, 'update'])->name('subscriptions.update');
+    Route::post('/subscriptions/{subscription}/bill', [SubscriptionController::class, 'billNow'])->middleware('throttle:10,1')->name('subscriptions.bill');
+    Route::get('/earnings', EarningsController::class.'@index')->name('earnings.index');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export.csv', [ReportController::class, 'export'])->name('reports.export');

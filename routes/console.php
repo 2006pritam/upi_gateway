@@ -63,5 +63,17 @@ Artisan::command('reports:daily-summary', function (\App\Services\ReportService 
     $this->info("Sent {$sent} summaries.");
 })->purpose('E-mail yesterday\'s payment summary to merchants who opted in');
 
+Artisan::command('subscriptions:bill', function (\App\Services\SubscriptionService $service) {
+    $n = 0;
+    \App\Models\Subscription::with('user')->where('status', 'active')->whereDate('next_due_at', '<=', today())->orderBy('id')
+        ->each(function ($sub) use ($service, &$n) {
+            if ($sub->user?->is_active && $service->bill($sub)) {
+                $n++;
+            }
+        });
+    $this->info("Created {$n} invoices.");
+})->purpose('Create and send invoices for subscriptions that are due');
+
+Schedule::command('subscriptions:bill')->dailyAt('09:00')->timezone('Asia/Kolkata');
 Schedule::command('reports:daily-summary')->dailyAt('08:00')->timezone('Asia/Kolkata');
 Schedule::command('orders:check-pending')->everyMinute()->withoutOverlapping();
