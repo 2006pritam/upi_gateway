@@ -7,115 +7,99 @@
 
 @section('content')
 <div class="space-y-10">
-    {{-- API keys --}}
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div>
-            <h2 class="text-base font-semibold text-slate-900">API credentials</h2>
-            <p class="mt-1 text-sm text-slate-500">Send these as <span class="kbd">X-Api-Key</span> and <span class="kbd">X-Api-Secret</span> headers. Keep the secret on your server only.</p>
+    {{-- Two clear environments: Live and Sandbox --}}
+    <section>
+        <div class="mb-5">
+            <h2 class="text-base font-semibold text-slate-900">Your API connections</h2>
+            <p class="mt-1 text-sm text-slate-500">Set up one Live connection for real payments and one Sandbox connection for testing. Each has its own API credentials and webhook URL.</p>
         </div>
-        <div class="card p-6 lg:col-span-2 space-y-5">
-            <div>
-                <label class="label">API key</label>
-                <div class="flex gap-2">
-                    <input readonly value="{{ $user->api_key }}" class="input font-mono bg-slate-50">
-                    <x-copy :text="$user->api_key" />
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div class="card p-6 space-y-5">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-900">Live API</h3>
+                        <p class="mt-1 text-xs text-slate-500">For real customer payments</p>
+                    </div>
+                    <span class="badge bg-emerald-50 text-emerald-700">LIVE</span>
                 </div>
-            </div>
-            <div>
-                <label class="label">API secret</label>
-                <div class="flex gap-2">
-                    <input id="secret" type="password" readonly value="{{ $user->api_secret }}" class="input font-mono bg-slate-50">
-                    <button type="button" class="btn btn-secondary btn-sm" data-toggle-secret><x-icon name="eye" class="w-4 h-4" /> Reveal</button>
-                    <x-copy :text="$user->api_secret" />
+                <div>
+                    <label class="label">API key</label>
+                    <div class="flex gap-2"><input readonly value="{{ $user->api_key }}" class="input font-mono bg-slate-50"><x-copy :text="$user->api_key" /></div>
                 </div>
-                <p class="help">Also used to sign webhooks (HMAC-SHA256).</p>
-            </div>
-            <div class="flex items-center justify-between gap-4 rounded-lg bg-red-50/60 ring-1 ring-red-100 px-4 py-3">
-                <div class="text-sm text-red-800"><b>Regenerate keys</b><div class="text-xs text-red-700/80">Old keys stop working immediately.</div></div>
-                <form method="POST" action="{{ route('settings.regenerate') }}">@csrf
-                    <button data-confirm="Old keys will stop working immediately. Continue?" class="btn btn-danger btn-sm"><x-icon name="refresh" class="w-4 h-4" /> Regenerate</button>
+                <div>
+                    <label class="label">API secret</label>
+                    <div class="flex gap-2">
+                        <input id="secret" type="password" readonly value="{{ $user->api_secret }}" class="input font-mono bg-slate-50">
+                        <button type="button" class="btn btn-secondary btn-sm" data-toggle-secret><x-icon name="eye" class="w-4 h-4" /> Reveal</button>
+                        <x-copy :text="$user->api_secret" />
+                    </div>
+                    <p class="help">Keep this secret on your server. It also signs Live webhooks.</p>
+                </div>
+                <form method="POST" action="{{ route('settings.regenerate') }}" class="flex items-center justify-between gap-3 rounded-lg bg-red-50/60 ring-1 ring-red-100 px-4 py-3">
+                    @csrf
+                    <div class="text-sm text-red-800"><b>Reset Live credentials</b><div class="text-xs text-red-700/80">The old credentials stop working immediately.</div></div>
+                    <button data-confirm="Old keys will stop working immediately. Continue?" class="btn btn-danger btn-sm"><x-icon name="refresh" class="w-4 h-4" /> Reset</button>
+                </form>
+                <form method="POST" action="{{ route('settings.webhook') }}" class="border-t border-slate-100 pt-5">
+                    @csrf
+                    <x-input name="webhook_url" label="Live webhook URL" type="url" :value="$user->webhook_url" placeholder="https://yoursite.com/upi/webhook" class="font-mono" help="Receives payment events. Verify the X-Signature header. Retries are automatic." />
+                    <div class="flex justify-end"><button class="btn btn-primary">Save Live webhook</button></div>
                 </form>
             </div>
-        </div>
-    </section>
 
-    {{-- Sandbox --}}
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
-        <div>
-            <div class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold tracking-wide text-amber-800">SANDBOX · TEST ONLY</div>
-            <h2 class="mt-3 text-base font-semibold text-slate-900">Sandbox credentials</h2>
-            <p class="mt-1 text-sm text-slate-500">Create simulated payments without contacting Paytm, PhonePe, banks, or UPI providers.</p>
-        </div>
-        <div class="card p-6 lg:col-span-2 space-y-5 ring-amber-200">
-            @if ($user->sandbox_api_key)
-                <div>
-                    <label class="label">Sandbox API key</label>
-                    <div class="flex gap-2">
-                        <input readonly value="{{ $user->sandbox_api_key }}" class="input font-mono bg-amber-50">
-                        <x-copy :text="$user->sandbox_api_key" />
+            <div class="card p-6 space-y-5 ring-amber-200">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-900">Sandbox API</h3>
+                        <p class="mt-1 text-xs text-slate-500">Test without real payments</p>
                     </div>
+                    <span class="badge bg-amber-100 text-amber-800">TEST</span>
                 </div>
-                @if (session('sandbox_api_secret_once_encrypted'))
-                    @php $sandboxSecretOnce = Crypt::decryptString(session('sandbox_api_secret_once_encrypted')); @endphp
-                    <div class="rounded-lg bg-amber-50 p-4 ring-1 ring-amber-300">
-                        <label class="label">Sandbox API secret · shown once</label>
-                        <div class="flex gap-2">
-                            <input readonly value="{{ $sandboxSecretOnce }}" class="input font-mono bg-white">
-                            <x-copy :text="$sandboxSecretOnce" />
+                @if ($user->sandbox_api_key)
+                    <div>
+                        <label class="label">API key</label>
+                        <div class="flex gap-2"><input readonly value="{{ $user->sandbox_api_key }}" class="input font-mono bg-amber-50"><x-copy :text="$user->sandbox_api_key" /></div>
+                    </div>
+                    @if (session('sandbox_api_secret_once_encrypted'))
+                        @php $sandboxSecretOnce = Crypt::decryptString(session('sandbox_api_secret_once_encrypted')); @endphp
+                        <div class="rounded-lg bg-amber-50 p-4 ring-1 ring-amber-300">
+                            <label class="label">API secret · shown once</label>
+                            <div class="flex gap-2"><input readonly value="{{ $sandboxSecretOnce }}" class="input font-mono bg-white"><x-copy :text="$sandboxSecretOnce" /></div>
+                            <p class="mt-2 text-xs font-medium text-amber-800">Copy this now. It cannot be shown again.</p>
                         </div>
-                        <p class="mt-2 text-xs font-medium text-amber-800">Copy this now. It cannot be retrieved after leaving this page.</p>
+                    @else
+                        <p class="text-sm text-slate-500">Your Sandbox secret is stored encrypted and cannot be viewed again. Reset it if lost.</p>
+                    @endif
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <form method="POST" action="{{ route('settings.sandbox.revoke') }}">@csrf
+                            <button data-confirm="Revoke Sandbox credentials? Existing TEST integrations will stop working." class="btn btn-danger btn-sm">Revoke</button>
+                        </form>
+                        <form method="POST" action="{{ route('settings.sandbox.regenerate') }}">@csrf
+                            <button data-confirm="Regenerate Sandbox credentials? The old TEST credentials will stop working." class="btn btn-secondary btn-sm">Reset Sandbox API</button>
+                        </form>
                     </div>
                 @else
-                    <p class="text-sm text-slate-500">The Sandbox secret is stored encrypted and cannot be displayed again. Regenerate it if lost.</p>
+                    <p class="text-sm text-slate-600">Create a test key and secret to start using Sandbox.</p>
+                    <form method="POST" action="{{ route('settings.sandbox.regenerate') }}" class="flex justify-end">@csrf
+                        <button class="btn btn-primary">Create Sandbox API</button>
+                    </form>
                 @endif
-                <div class="flex flex-wrap justify-end gap-2">
-                    <form method="POST" action="{{ route('settings.sandbox.revoke') }}">@csrf
-                        <button data-confirm="Revoke Sandbox credentials? Existing TEST integrations will stop working." class="btn btn-danger btn-sm">Revoke</button>
-                    </form>
-                    <form method="POST" action="{{ route('settings.sandbox.regenerate') }}">@csrf
-                        <button data-confirm="Regenerate Sandbox credentials? The old TEST credentials will stop working." class="btn btn-secondary btn-sm">Regenerate</button>
-                    </form>
-                </div>
-            @else
-                <p class="text-sm text-slate-600">No Sandbox credentials have been generated.</p>
-                <form method="POST" action="{{ route('settings.sandbox.regenerate') }}" class="flex justify-end">@csrf
-                    <button class="btn btn-primary">Generate Sandbox credentials</button>
+                <form method="POST" action="{{ route('settings.sandbox.webhook') }}" class="border-t border-slate-100 pt-5">
+                    @csrf
+                    <x-input name="sandbox_webhook_url" label="Sandbox webhook URL" type="url" :value="$user->sandbox_webhook_url" placeholder="https://sandbox.yoursite.com/webhook" class="font-mono" help="Use a separate URL from Live. Test events are signed with the Sandbox secret." />
+                    <div class="flex justify-end"><button class="btn btn-primary">Save Sandbox webhook</button></div>
                 </form>
-            @endif
-
-            <form method="POST" action="{{ route('settings.sandbox.webhook') }}" class="border-t border-slate-100 pt-5">
-                @csrf
-                <x-input name="sandbox_webhook_url" label="Sandbox webhook endpoint" type="url" :value="$user->sandbox_webhook_url" placeholder="https://sandbox.yoursite.com/webhook" class="font-mono"
-                    help="Must differ from the Live webhook URL. TEST events are signed only with the Sandbox secret." />
-                <div class="flex justify-end"><button class="btn btn-primary">Save Sandbox webhook</button></div>
-            </form>
+            </div>
         </div>
     </section>
 
-    {{-- Webhook --}}
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
-        <div>
-            <h2 class="text-base font-semibold text-slate-900">Webhook</h2>
-            <p class="mt-1 text-sm text-slate-500">We POST <span class="kbd">order.paid</span> and <span class="kbd">order.expired</span> events here, retrying up to 6 times.</p>
-        </div>
-        <form method="POST" action="{{ route('settings.webhook') }}" class="card p-6 lg:col-span-2">
-            @csrf
-            <x-input name="webhook_url" label="Endpoint URL" type="url" :value="$user->webhook_url" placeholder="https://yoursite.com/upi/webhook" class="font-mono"
-                help="Verify the X-Signature header on every request. See the API docs for sample code." />
-            <div class="flex justify-end"><button class="btn btn-primary">Save webhook</button></div>
-        </form>
-    </section>
-
-    {{-- Additional webhook endpoints --}}
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
-        <div>
-            <h2 class="text-base font-semibold text-slate-900">More webhook endpoints</h2>
-            <p class="mt-1 text-sm text-slate-500">Send every event to several URLs, up to {{ \App\Models\User::MAX_EXTRA_WEBHOOKS }} extra per environment. Each is signed with the same secret and retried on its own.</p>
-        </div>
-        <div class="card p-6 lg:col-span-2 space-y-5">
+    <details class="card p-6">
+        <summary class="cursor-pointer text-sm font-semibold text-slate-800">Advanced: send webhooks to additional URLs</summary>
+        <p class="mt-2 text-sm text-slate-500">Optional. Send each event to extra destinations in addition to the Live and Sandbox URLs above.</p>
+        <div class="mt-5 space-y-5">
             @php $endpoints = $user->webhookEndpoints()->orderBy('environment')->orderBy('id')->get(); @endphp
             @forelse ($endpoints as $endpoint)
-                <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
                     <div class="min-w-0">
                         <span class="kbd">{{ $endpoint->environment }}</span>
                         <span class="font-mono text-sm text-slate-700 break-all">{{ $endpoint->url }}</span>
@@ -127,7 +111,7 @@
                     </form>
                 </div>
             @empty
-                <p class="text-sm text-slate-600">No extra endpoints yet.</p>
+                <p class="text-sm text-slate-600">No additional webhook URLs configured.</p>
             @endforelse
 
             <form method="POST" action="{{ route('settings.webhook-endpoints.store') }}" class="border-t border-slate-100 pt-5 space-y-3">
@@ -139,12 +123,12 @@
                         <option value="sandbox" @selected(old('environment') === 'sandbox')>Sandbox</option>
                     </select>
                 </div>
-                <x-input name="url" label="Endpoint URL" type="url" :value="old('url')" placeholder="https://another-service.com/upi/webhook" class="font-mono" />
-                @error('webhook_url')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
-                <div class="flex justify-end"><button class="btn btn-primary">Add endpoint</button></div>
+                <x-input name="url" label="Additional webhook URL" type="url" :value="old('url')" placeholder="https://another-service.com/upi/webhook" class="font-mono" />
+                @error('url')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                <div class="flex justify-end"><button class="btn btn-primary">Add webhook URL</button></div>
             </form>
         </div>
-    </section>
+    </details>
 
     {{-- Profile --}}
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
@@ -166,7 +150,10 @@
             <div class="flex justify-end"><button class="btn btn-primary">Save profile</button></div>
         </form>
     </section>
-    {{-- Named API keys --}}
+    {{-- Optional additional API keys --}}
+    <details>
+        <summary class="cursor-pointer text-sm font-semibold text-slate-700">Advanced: additional API keys for separate websites or apps</summary>
+        <div class="mt-4">
     @php $namedKeys = $user->apiKeys()->orderByRaw('revoked_at is not null')->latest('id')->get(); @endphp
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div>
@@ -226,6 +213,8 @@
             </div>
         </div>
     </section>
+        </div>
+    </details>
 
     {{-- Alerts --}}
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
