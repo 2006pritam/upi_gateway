@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\SendWebhook;
+use App\Models\WebhookEndpoint;
 use App\Models\WebhookLog;
 use Illuminate\Http\Request;
 
@@ -29,7 +30,10 @@ class WebhookController extends Controller
         $order = $log->order()->with('user')->firstOrFail();
         abort_unless($order->user_id === $request->user()->id, 404);
 
-        SendWebhook::dispatch($order, $log->event, force: true);
+        // Re-send only to the URL this log entry was for (an extra endpoint, or the primary URL).
+        $endpoint = WebhookEndpoint::where('user_id', $order->user_id)->where('url', $log->url)->first();
+
+        SendWebhook::dispatch($order, $log->event, force: true, endpointId: $endpoint?->id);
 
         return back()->with('status', "Webhook {$log->event} queued for re-delivery.");
     }

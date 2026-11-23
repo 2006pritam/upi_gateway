@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Order;
+use App\Models\WebhookEndpoint;
 use App\Support\SafeUrl;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -31,7 +32,13 @@ class SendWebhook implements ShouldQueue
 
     public int $tries = 6;
 
-    public function __construct(public Order $order, public string $event, public bool $force = false) {}
+    /**
+     * $endpointId null = the primary URL (the key's own URL or the merchant-wide one). On the first,
+     *                    non-forced attempt this job also queues one job per additional endpoint.
+     * $endpointId set  = deliver to that one additional endpoint only.
+     * Each endpoint is its own job, so one failing URL never blocks or re-sends the others.
+     */
+    public function __construct(public Order $order, public string $event, public bool $force = false, public ?int $endpointId = null) {}
 
     public function backoff(): array
     {
@@ -53,11 +60,29 @@ class SendWebhook implements ShouldQueue
             $signingSecret = $apiKey->secret;
         }
 
-        if (! $webhookUrl || ! $signingSecret) {
+        if (! $signingSecret) {
             return;
         }
 
-        if ($sandbox && $merchant->webhook_url && $webhookUrl
+        if ($this->endpointId === null) {
+            if (! $this->force && $this->attempts() === 1) {
+                $this->fanOut($merchant->id, $sandbox, $webhookUrl);
+            }
+        } else {
+            $endpoint = WebhookEndpoint::query()
+                ->where('user_id', $merchant->id)
+                ->where('environment', $sandbox ? Order::SANDBOX : Order::LIVE)
+                ->find($this->endpointId);
+
+            // Endpoint was deleted after the job was queued: nothing to deliver.
+            $webhookUrl = $endpoint?->url;
+        }
+
+        if (! $webhookUrl) {
+            return;
+        }
+
+        if ($this->endpointId === null && $sandbox && $merchant->webhook_url
             && hash_equals(rtrim($merchant->webhook_url, '/'), rtrim($webhookUrl, '/'))) {
             return;
         }
@@ -67,6 +92,7 @@ class SendWebhook implements ShouldQueue
         // that occurred after the HTTP call succeeded but before job deletion.
         if (! $this->force && $this->order->webhookLogs()
             ->where('event', $this->event)
+            ->where('url', $webhookUrl)
             ->where('success', true)
             ->exists()) {
             return;
@@ -146,6 +172,30 @@ class SendWebhook implements ShouldQueue
             throw new RuntimeException(
                 'Webhook delivery failed with '.($code ?? 'no response')
             );
+        }
+    }
+
+    /** Queue one delivery job per additional endpoint of this order's environment. */
+    private function fanOut(int $merchantId, bool $sandbox, ?string $primaryUrl): void
+    {
+        $endpoints = WebhookEndpoint::query()
+            ->where('user_id', $merchantId)
+            ->where('environment', $sandbox ? Order::SANDBOX : Order::LIVE)
+            ->get();
+
+        foreach ($endpoints as $endpoint) {
+            // Same URL as the primary one: it is already being delivered to.
+            if ($primaryUrl && hash_equals(rtrim($primaryUrl, '/'), rtrim($endpoint->url, '/'))) {
+                continue;
+            }
+
+            try {
+                static::dispatch($this->order, $this->event, false, $endpoint->id);
+            } catch (Throwable $e) {
+                // With the sync queue a failing endpoint throws here; it must not
+                // stop the primary delivery or the other endpoints.
+                report($e);
+            }
         }
     }
 }

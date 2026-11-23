@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Models\User;
+use App\Models\WebhookEndpoint;
 use App\Services\TelegramNotifier;
 use App\Support\SafeUrl;
 use Illuminate\Http\Request;
@@ -103,6 +105,59 @@ class SettingsController extends Controller
         $request->user()->update(['sandbox_webhook_url' => $url]);
 
         return back()->with('status', 'Sandbox webhook URL saved.');
+    }
+
+    /** Add an extra webhook endpoint (live or sandbox). */
+    public function storeWebhookEndpoint(Request $request)
+    {
+        $data = $request->validate([
+            'environment' => ['required', Rule::in([Order::LIVE, Order::SANDBOX])],
+            'url' => ['required', 'string', 'max:500'],
+        ]);
+
+        $user = $request->user();
+        $environment = $data['environment'];
+        $url = trim($data['url']);
+
+        SafeUrl::validate($url);
+
+        $norm = fn (?string $u) => $u === null ? null : rtrim(strtolower($u), '/');
+
+        $existing = $user->webhookEndpoints()->where('environment', $environment)->pluck('url');
+        $primary = $environment === Order::SANDBOX ? $user->sandbox_webhook_url : $user->webhook_url;
+
+        if ($existing->count() >= User::MAX_EXTRA_WEBHOOKS) {
+            throw ValidationException::withMessages([
+                'url' => 'You can add up to '.User::MAX_EXTRA_WEBHOOKS.' extra '.$environment.' webhook endpoints.',
+            ]);
+        }
+
+        $taken = $existing->push($primary)->filter()->map($norm);
+        if ($taken->contains($norm($url))) {
+            throw ValidationException::withMessages(['url' => 'That URL is already a '.$environment.' webhook endpoint.']);
+        }
+
+        if ($environment === Order::SANDBOX) {
+            $liveUrls = $user->webhookEndpoints()->where('environment', Order::LIVE)->pluck('url')
+                ->push($user->webhook_url)->filter()->map($norm);
+
+            if ($liveUrls->contains($norm($url))) {
+                throw ValidationException::withMessages(['url' => 'Use a separate endpoint for Sandbox webhooks.']);
+            }
+        }
+
+        $user->webhookEndpoints()->create(['environment' => $environment, 'url' => $url]);
+
+        return back()->with('status', 'Webhook endpoint added.');
+    }
+
+    public function destroyWebhookEndpoint(Request $request, WebhookEndpoint $endpoint)
+    {
+        abort_unless($endpoint->user_id === $request->user()->id, 404);
+
+        $endpoint->delete();
+
+        return back()->with('status', 'Webhook endpoint removed.');
     }
 
     public function regenerateSandboxKeys(Request $request)

@@ -40,6 +40,9 @@ class User extends Authenticatable
         'daily_summary',
     ];
 
+    /** Extra endpoints allowed per environment (the primary URL is not counted). */
+    public const MAX_EXTRA_WEBHOOKS = 4;
+
     public const ROTATION_MODES = [
         'random' => 'Random rotation',
         'default' => 'Default account first',
@@ -85,6 +88,12 @@ class User extends Authenticatable
     public function paymentAccounts(): HasMany
     {
         return $this->hasMany(PaymentAccount::class);
+    }
+
+    /** Extra webhook URLs, on top of webhook_url / sandbox_webhook_url and per-key URLs. */
+    public function webhookEndpoints(): HasMany
+    {
+        return $this->hasMany(WebhookEndpoint::class);
     }
 
     public function apiKeys(): HasMany
