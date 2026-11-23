@@ -106,6 +106,46 @@
         </form>
     </section>
 
+    {{-- Additional webhook endpoints --}}
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
+        <div>
+            <h2 class="text-base font-semibold text-slate-900">More webhook endpoints</h2>
+            <p class="mt-1 text-sm text-slate-500">Send every event to several URLs, up to {{ \App\Models\User::MAX_EXTRA_WEBHOOKS }} extra per environment. Each is signed with the same secret and retried on its own.</p>
+        </div>
+        <div class="card p-6 lg:col-span-2 space-y-5">
+            @php($endpoints = $user->webhookEndpoints()->orderBy('environment')->orderBy('id')->get())
+            @forelse ($endpoints as $endpoint)
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <span class="kbd">{{ $endpoint->environment }}</span>
+                        <span class="font-mono text-sm text-slate-700 break-all">{{ $endpoint->url }}</span>
+                    </div>
+                    <form method="POST" action="{{ route('settings.webhook-endpoints.destroy', $endpoint) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button class="btn btn-secondary">Remove</button>
+                    </form>
+                </div>
+            @empty
+                <p class="text-sm text-slate-600">No extra endpoints yet.</p>
+            @endforelse
+
+            <form method="POST" action="{{ route('settings.webhook-endpoints.store') }}" class="border-t border-slate-100 pt-5 space-y-3">
+                @csrf
+                <div>
+                    <label class="block text-sm font-medium text-slate-700" for="we_environment">Environment</label>
+                    <select id="we_environment" name="environment" class="input">
+                        <option value="live" @selected(old('environment') !== 'sandbox')>Live</option>
+                        <option value="sandbox" @selected(old('environment') === 'sandbox')>Sandbox</option>
+                    </select>
+                </div>
+                <x-input name="url" label="Endpoint URL" type="url" :value="old('url')" placeholder="https://another-service.com/upi/webhook" class="font-mono" />
+                @error('webhook_url')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                <div class="flex justify-end"><button class="btn btn-primary">Add endpoint</button></div>
+            </form>
+        </div>
+    </section>
+
     {{-- Profile --}}
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
         <div>

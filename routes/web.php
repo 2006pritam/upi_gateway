@@ -85,6 +85,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
     Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
     Route::post('/settings/webhook', [SettingsController::class, 'updateWebhook'])->name('settings.webhook');
+    Route::post('/settings/webhook-endpoints', [SettingsController::class, 'storeWebhookEndpoint'])->name('settings.webhook-endpoints.store');
+    Route::delete('/settings/webhook-endpoints/{endpoint}', [SettingsController::class, 'destroyWebhookEndpoint'])->name('settings.webhook-endpoints.destroy');
     Route::post('/settings/sandbox/webhook', [SettingsController::class, 'updateSandboxWebhook'])->name('settings.sandbox.webhook');
     Route::post('/settings/sandbox/regenerate-keys', [SettingsController::class, 'regenerateSandboxKeys'])->name('settings.sandbox.regenerate');
     Route::post('/settings/sandbox/revoke-keys', [SettingsController::class, 'revokeSandboxKeys'])->name('settings.sandbox.revoke');
