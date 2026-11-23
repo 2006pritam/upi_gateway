@@ -150,15 +150,12 @@
             <div class="flex justify-end"><button class="btn btn-primary">Save profile</button></div>
         </form>
     </section>
-    {{-- Optional additional API keys --}}
-    <details>
-        <summary class="cursor-pointer text-sm font-semibold text-slate-700">Advanced: additional API keys for separate websites or apps</summary>
-        <div class="mt-4">
+    {{-- Saved website/app API keys --}}
     @php $namedKeys = $user->apiKeys()->orderByRaw('revoked_at is not null')->latest('id')->get(); @endphp
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div>
-            <h2 class="text-base font-semibold text-slate-900">API keys by website</h2>
-            <p class="mt-1 text-sm text-slate-500">Create a separate key and secret for each website or app. Revoking one never affects the others. Webhooks for a key are signed with that key's own secret.</p>
+            <h2 class="text-base font-semibold text-slate-900">Saved API keys by site</h2>
+            <p class="mt-1 text-sm text-slate-500">Every website or app with its own API key is listed here with its environment and status. Each site's key can be revoked independently. Secrets are shown only once when created.</p>
         </div>
         <div class="card p-6 lg:col-span-2 space-y-5">
             @if (session('new_api_key_encrypted'))
@@ -186,6 +183,12 @@
                     <div><div class="text-sm font-medium text-slate-900">Default key <span class="badge bg-slate-100 text-slate-600">Live</span></div><div class="text-xs text-slate-500 font-mono">{{ $user->api_key }}</div></div>
                     <span class="text-xs text-slate-400">Shown above</span>
                 </div>
+                @if ($user->sandbox_api_key)
+                    <div class="px-4 py-3 flex items-center justify-between gap-3 bg-amber-50/50">
+                        <div><div class="text-sm font-medium text-slate-900">Default key <span class="badge bg-amber-100 text-amber-800">Sandbox</span></div><div class="text-xs text-slate-500 font-mono">{{ $user->sandbox_api_key }}</div></div>
+                        <span class="text-xs text-slate-400">Shown above</span>
+                    </div>
+                @endif
                 @forelse ($namedKeys as $k)
                     <div class="px-4 py-3 space-y-2 {{ $k->isActive() ? '' : 'opacity-60' }}">
                         <div class="flex items-center justify-between gap-3">
@@ -213,8 +216,6 @@
             </div>
         </div>
     </section>
-        </div>
-    </details>
 
     {{-- Alerts --}}
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
