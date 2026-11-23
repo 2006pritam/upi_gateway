@@ -7,7 +7,7 @@
         try { if (localStorage.getItem('upi_checkout_theme') === 'dark') document.documentElement.classList.add('upi-theme-dark'); } catch (e) {}
     </script>
     <title>Install · {{ config('app.brand_name', 'eMudra') }}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/emudra-mark.svg') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">

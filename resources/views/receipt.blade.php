@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
 <script nonce="{{ $csp_nonce }}">try { if (localStorage.getItem('upi_checkout_theme') === 'dark') document.documentElement.classList.add('upi-theme-dark'); } catch (e) {}</script>
 <title>Receipt {{ $order->order_no }}</title>
-<link rel="icon" type="image/svg+xml" href="{{ asset('images/emudra-mark.svg') }}">
+<link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <style>
  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f1f5f9;margin:0;color:#0f172a}
