@@ -11,11 +11,11 @@
         ['Paytm',   'paytmmp://pay',   'text-[#00baf2]', 'images/upi/paytm.png'],
         ['BHIM',    'upi://pay',       'text-[#f47920]', 'images/upi/bhim.png'],
     ];
-    // More apps that open directly on Android phones: [name, Android package, text colour, badge colour, letter]
+    // More apps that open directly on Android phones: [name, Android package, official app icon]
     $androidApps = [
-        ['FamPay / FamX', 'com.fampay.in',            'text-[#7c3aed]', 'bg-[#7c3aed]', 'F'],
-        ['Navi',          'com.naviapp',              'text-[#2563eb]', 'bg-[#2563eb]', 'N'],
-        ['super.money',   'money.super.payments',     'text-[#0f766e]', 'bg-[#0f766e]', 'S'],
+        ['FamApp / FamX', 'com.fampay.in',            'images/upi/famapp.png'],
+        ['Navi',          'com.naviapp',              'images/upi/navi.jpg'],
+        ['super.money',   'money.super.payments',     'images/upi/super-money.jpg'],
     ];
     $isAndroid = stripos((string) request()->userAgent(), 'android') !== false;
 @endphp
@@ -26,9 +26,9 @@
 @endpush
 
 @section('body')
-<div class="min-h-full bg-slate-100 flex flex-col">
+<div class="payment-canvas min-h-full flex flex-col">
     <div class="flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div class="w-full max-w-3xl bg-white rounded-2xl shadow-pop ring-1 ring-slate-200 overflow-hidden grid md:grid-cols-5">
+        <div class="w-full max-w-3xl bg-white rounded-3xl shadow-pop ring-1 ring-white/80 overflow-hidden grid md:grid-cols-5 checkout-card">
 
             {{-- Summary --}}
             <div class="md:col-span-2 relative bg-slate-950 text-white p-6 sm:p-8 flex flex-col overflow-hidden">
@@ -171,6 +171,9 @@
                         </div>
                     </div>
                 @else
+                    <div class="mb-1 flex justify-center">
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold tracking-wide text-emerald-700 ring-1 ring-emerald-100"><x-icon name="lock" class="h-3.5 w-3.5" /> SECURE UPI CHECKOUT</span>
+                    </div>
                     <div class="text-center">
                         <h1 class="text-lg font-semibold text-slate-900">Scan &amp; pay with any UPI app</h1>
                         <p class="text-sm text-slate-500 mt-1">Open your UPI app, scan the QR and approve the payment.</p>
@@ -190,9 +193,9 @@
                                 <img src="{{ asset($logo) }}" class="w-4 h-4 rounded-sm" alt="{{ $name }}">{{ $name }}
                             </span>
                         @endforeach
-                        @foreach ($androidApps as [$name, $package, $color, $badge, $letter])
-                            <span class="rounded-full bg-slate-50 ring-1 ring-slate-200 px-3 py-1 text-xs font-bold {{ $color }} flex items-center gap-1.5">
-                                <span class="w-4 h-4 rounded-sm {{ $badge }} text-white text-[9px] leading-none font-bold grid place-items-center" aria-hidden="true">{{ $letter }}</span>{{ $name }}
+                        @foreach ($androidApps as [$name, $package, $logo])
+                            <span class="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm flex items-center gap-1.5">
+                                <img src="{{ asset($logo) }}" class="w-4 h-4 rounded object-contain" alt="" aria-hidden="true">{{ $name }}
                             </span>
                         @endforeach
                     </div>
@@ -210,9 +213,9 @@
                         </div>
                         @if ($isAndroid)
                             <div class="grid grid-cols-3 gap-2">
-                                @foreach ($androidApps as [$name, $package, $color, $badge, $letter])
-                                    <a data-upi-app="{{ $name }}" href="{{ $order->androidIntentUrl($package) }}" class="btn btn-secondary font-bold {{ $color }} flex items-center justify-center gap-1.5 text-xs px-2">
-                                        <span class="w-5 h-5 rounded-sm {{ $badge }} text-white text-[10px] leading-none font-bold grid place-items-center shrink-0" aria-hidden="true">{{ $letter }}</span><span class="truncate">{{ $name }}</span>
+                                @foreach ($androidApps as [$name, $package, $logo])
+                                    <a data-upi-app="{{ $name }}" href="{{ $order->androidIntentUrl($package) }}" class="btn btn-secondary font-semibold text-slate-700 flex items-center justify-center gap-1.5 text-xs px-2">
+                                        <img src="{{ asset($logo) }}" class="w-5 h-5 rounded object-contain shrink-0" alt="" aria-hidden="true"><span class="truncate">{{ $name }}</span>
                                     </a>
                                 @endforeach
                             </div>
