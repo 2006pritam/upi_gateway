@@ -92,6 +92,7 @@
                         </dl>
                         <a href="{{ route('pay.receipt', $order) }}" target="_blank" class="mt-6 btn btn-secondary btn-sm"><x-icon name="receipt" class="w-4 h-4" /> Download receipt</a>
                         <p class="mt-4 text-xs text-slate-400">You can safely close this page.</p>
+                        <button id="play-success-sound" type="button" class="mt-3 hidden rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50">Tap to hear payment confirmation</button>
                     </div>
                 @elseif ($order->status === 'review')
                     <div class="flex-1 flex flex-col items-center justify-center text-center py-8">
@@ -106,6 +107,7 @@
                             <div class="flex justify-between px-4 py-3"><dt class="text-slate-500">Submitted</dt><dd class="font-medium text-slate-900">{{ $order->utr_submitted_at?->format('d M, h:i A') }}</dd></div>
                         </dl>
                         <p class="mt-6 text-xs text-slate-400">Don't pay again. You can close this page; the merchant will be notified once it's confirmed.</p>
+                        <button id="play-success-sound" type="button" class="mt-3 hidden rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50">Tap to hear payment confirmation</button>
                     </div>
                 @elseif ($order->status === 'expired')
                     <div class="flex-1 flex flex-col items-center justify-center text-center py-8">
@@ -238,6 +240,7 @@
                         <div class="flex items-center justify-center gap-2.5 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-4 py-3 text-sm text-amber-800">
                             <svg class="w-4 h-4 animate-spin text-amber-600" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".25" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
                             <span id="status-text">{{ $order->acceptsCustomerUtr() ? 'After paying, submit your UTR above' : 'Waiting for payment…' }}</span>
+                            <button id="play-success-sound" type="button" class="hidden rounded-md border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50">Play sound</button>
                         </div>
                         <p class="mt-2 text-center text-xs text-slate-400">Please don't close or refresh this page after paying.</p>
                     </div>
@@ -252,6 +255,73 @@
     </footer>
 </div>
 @endsection
+
+@push('scripts')
+<script nonce="{{ $csp_nonce }}">
+(() => {
+    const playedKey = 'upi-payment-success-sound:' + @json((string) $order->id);
+    const fallbackButton = document.getElementById('play-success-sound');
+    let audioContext = null;
+
+    window.playPaymentSuccessSound = async () => {
+        try {
+            if (sessionStorage.getItem(playedKey) === '1') return true;
+        } catch (e) {}
+
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) throw new Error('Audio is not supported');
+            if (!audioContext || audioContext.state === 'closed') audioContext = new AudioContextClass();
+            if (audioContext.state !== 'running') {
+                const resumed = await Promise.race([
+                    audioContext.resume().then(() => true).catch(() => false),
+                    new Promise(resolve => window.setTimeout(() => resolve(false), 300)),
+                ]);
+                if (!resumed) throw new Error('Audio needs a user gesture');
+            }
+            if (audioContext.state !== 'running') throw new Error('Audio needs a user gesture');
+
+            const notes = [659.25, 783.99, 987.77];
+            const startAt = audioContext.currentTime + 0.025;
+            notes.forEach((frequency, index) => {
+                const oscillator = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                const noteStart = startAt + index * 0.12;
+                oscillator.type = 'sine';
+                oscillator.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.0001, noteStart);
+                gain.gain.exponentialRampToValueAtTime(0.12, noteStart + 0.025);
+                gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.34);
+                oscillator.connect(gain);
+                gain.connect(audioContext.destination);
+                oscillator.start(noteStart);
+                oscillator.stop(noteStart + 0.36);
+            });
+            try { sessionStorage.setItem(playedKey, '1'); } catch (e) {}
+            if (fallbackButton) fallbackButton.classList.add('hidden');
+            window.setTimeout(() => {
+                if (audioContext && audioContext.state !== 'closed') audioContext.close().catch(() => {});
+            }, 850);
+            return true;
+        } catch (e) {
+            if (fallbackButton) fallbackButton.classList.remove('hidden');
+            return false;
+        }
+    };
+
+    if (fallbackButton) {
+        fallbackButton.addEventListener('click', async () => {
+            const played = await window.playPaymentSuccessSound();
+            if (played && typeof window.continueAfterPaymentSound === 'function') window.continueAfterPaymentSound();
+        });
+    }
+
+    @if ($order->status === 'paid')
+        window.playPaymentSuccessSound();
+    @endif
+})();
+</script>
+@endpush
 
 @if (in_array($order->status, ['pending', 'review']))
 @push('scripts')
@@ -302,8 +372,20 @@
                 const data = await res.json();
                 if (data.status !== initialStatus) {
                     const text = document.getElementById('status-text');
-                    if (text) text.textContent = data.status === 'paid' ? 'Payment received! Redirecting…' : 'Updating…';
-                    window.location.href = data.redirect || window.location.href;
+                    const destination = data.redirect || window.location.href;
+                    if (data.status === 'paid') {
+                        if (text) text.textContent = 'Payment received!';
+                        const played = await window.playPaymentSuccessSound();
+                        let redirectTimer;
+                        window.continueAfterPaymentSound = () => {
+                            window.clearTimeout(redirectTimer);
+                            window.setTimeout(() => { window.location.href = destination; }, 650);
+                        };
+                        redirectTimer = window.setTimeout(() => { window.location.href = destination; }, played ? 850 : 4500);
+                    } else {
+                        if (text) text.textContent = 'Updating…';
+                        window.location.href = destination;
+                    }
                     return;
                 }
             }
