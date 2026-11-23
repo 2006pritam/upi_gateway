@@ -24,12 +24,12 @@
 <div class="sheet">
   <h1>{{ $link->user->displayName() }}</h1>
   <div class="sub">{{ $link->title }}</div>
-  <div class="qr">{!! $qr !!}</div>
+  <div class="qr qr-code-wrap">{!! $qr !!}<x-qr-brand-overlay /></div>
   @if ($link->isFixedAmount())<div class="amt">₹{{ number_format((float) $link->amount, 2) }}</div>@endif
   <div class="scan">Scan to pay</div>
   <div class="apps">Opens in any camera or UPI app · GPay · PhonePe · Paytm · BHIM</div>
   <div class="url">{{ $link->publicUrl() }}</div>
-  <div class="foot">Secured by {{ config('app.brand_name', 'eMudra') }}</div>
+  <div class="foot flex justify-center"><x-logo compact dark /></div>
 </div>
 <x-theme-toggle />
 </body></html>

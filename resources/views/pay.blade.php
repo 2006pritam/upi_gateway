@@ -181,12 +181,13 @@
                         <p class="text-sm text-slate-500 mt-1">Open your UPI app, scan the QR and approve the payment.</p>
                     </div>
 
-                    <div class="qr-panel relative mx-auto mt-6 p-3 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
+                    <div class="qr-panel qr-code-wrap relative mx-auto mt-6 p-3 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
                         <span class="absolute -top-px -left-px w-6 h-6 border-t-[3px] border-l-[3px] border-brand-600 rounded-tl-2xl"></span>
                         <span class="absolute -top-px -right-px w-6 h-6 border-t-[3px] border-r-[3px] border-brand-600 rounded-tr-2xl"></span>
                         <span class="absolute -bottom-px -left-px w-6 h-6 border-b-[3px] border-l-[3px] border-brand-600 rounded-bl-2xl"></span>
                         <span class="absolute -bottom-px -right-px w-6 h-6 border-b-[3px] border-r-[3px] border-brand-600 rounded-br-2xl"></span>
                         <img src="{{ route('pay.qr', $order) }}" alt="UPI QR code for ₹{{ $amount }}" class="w-52 h-52 sm:w-56 sm:h-56">
+                        <x-qr-brand-overlay />
                     </div>
 
                     <div class="mt-5 flex flex-wrap justify-center gap-2">
@@ -250,7 +251,7 @@
     </div>
 
     <footer class="pb-6 flex flex-col items-center gap-2 text-xs text-slate-400">
-        <div class="flex items-center gap-1.5"><x-icon name="lock" class="w-3.5 h-3.5" /> Secured by <span class="font-semibold text-slate-500">{{ config('app.brand_name', 'eMudra') }}</span></div>
+        <div class="flex items-center justify-center"><x-logo compact dark /></div>
         <div>Payments go directly to the merchant's bank account via UPI.</div>
     </footer>
 </div>
