@@ -166,24 +166,29 @@
             <p class="mt-1 text-sm text-slate-500">Every website or app with its own API key is listed here with its environment and status. Each site's key can be revoked independently. Secrets are shown only once when created.</p>
         </div>
         <div class="card p-6 lg:col-span-2 space-y-5">
+            <div>
+                <h3 class="text-sm font-semibold text-slate-900">Add a website or app</h3>
+                <p class="mt-1 text-sm text-slate-500">Enter the site name and, if it has one, its own webhook address. Click Save to automatically create and save a unique API key and secret for that site. The secret is shown once, so copy it when it appears.</p>
+            </div>
             @if (session('new_api_key_encrypted'))
                 @php $nk = json_decode(Crypt::decryptString(session('new_api_key_encrypted')), true); @endphp
                 <div class="rounded-lg bg-amber-50 p-4 ring-1 ring-amber-300 space-y-3">
-                    <div class="text-sm font-semibold text-amber-900">New key: {{ $nk['name'] }}</div>
+                    <div class="text-sm font-semibold text-amber-900">Saved site: {{ $nk['name'] }} — unique credentials created</div>
                     <div><label class="label">API key</label><div class="flex gap-2"><input readonly value="{{ $nk['key'] }}" class="input font-mono bg-white"><x-copy :text="$nk['key']" /></div></div>
                     <div><label class="label">API secret · shown once</label><div class="flex gap-2"><input readonly value="{{ $nk['secret'] }}" class="input font-mono bg-white"><x-copy :text="$nk['secret']" /></div>
-                        <p class="mt-2 text-xs font-medium text-amber-800">Copy this now. It cannot be shown again.</p></div>
+                        <p class="mt-2 text-xs font-medium text-amber-800">Copy and save this secret now. For security, it cannot be shown again.</p></div>
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('api-keys.store') }}" class="grid sm:grid-cols-6 gap-3 items-end">
+            <form method="POST" action="{{ route('api-keys.store') }}" class="space-y-4">
                 @csrf
-                <div class="sm:col-span-3"><label class="label">Website or app name</label><input name="name" value="{{ old('name') }}" maxlength="60" required class="input" placeholder="e.g. Academy website"></div>
-                <div class="sm:col-span-2"><label class="label">Use for</label><select name="environment" class="input"><option value="live">Real payments (Live)</option><option value="sandbox">Testing only (Sandbox)</option></select></div>
-                <button class="btn btn-primary sm:col-span-1">Create site key</button>
-                <div class="sm:col-span-6"><label class="label">Payment-updates address <span class="text-slate-400 font-normal">(optional; ask your developer)</span></label><input name="webhook_url" value="{{ old('webhook_url') }}" maxlength="500" class="input font-mono" placeholder="Enter the address your developer provides"></div>
-                @error('name')<p class="sm:col-span-6 text-sm text-red-600">{{ $message }}</p>@enderror
-                @error('webhook_url')<p class="sm:col-span-6 text-sm text-red-600">{{ $message }}</p>@enderror
+                <div><label class="label">Site name</label><input name="name" value="{{ old('name') }}" maxlength="60" required class="input" placeholder="e.g. Main website"></div>
+                <div><label class="label">This site's payment update address (webhook URL) <span class="text-slate-400 font-normal">(optional)</span></label><input type="url" name="webhook_url" value="{{ old('webhook_url') }}" maxlength="500" class="input font-mono" placeholder="Ask your website developer for this address"><p class="help">Enter a separate address if this site needs one. If blank, it uses the main address for the selected payment mode.</p></div>
+                <div><label class="label">Use this site key for</label><select name="environment" class="input"><option value="live" @selected(old('environment') !== 'sandbox')>Real payments (Live)</option><option value="sandbox" @selected(old('environment') === 'sandbox')>Testing only (Sandbox)</option></select></div>
+                @error('name')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                @error('environment')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                @error('webhook_url')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                <div class="flex justify-end"><button class="btn btn-primary">Save site & generate unique API key and secret</button></div>
             </form>
 
             <div class="divide-y divide-slate-100 rounded-lg ring-1 ring-slate-200">

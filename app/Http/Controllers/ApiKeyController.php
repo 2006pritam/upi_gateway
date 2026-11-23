@@ -32,7 +32,7 @@ class ApiKeyController extends Controller
         [$apiKey, $secret] = ApiKey::issue($user, $data['name'], $data['environment'], $webhook);
 
         return back()
-            ->with('status', "Key \"{$apiKey->name}\" created. Copy the secret now; it will not be shown again.")
+            ->with('status', "Site \"{$apiKey->name}\" saved with its own API key and secret. Copy the secret now; it will not be shown again.")
             ->with('new_api_key_encrypted', Crypt::encryptString(json_encode(['name' => $apiKey->name, 'key' => $apiKey->key, 'secret' => $secret])));
     }
 
