@@ -162,8 +162,7 @@ html.upi-theme-dark .btn-dark { background-color: #29374d !important; color: #f8
 html.upi-theme-dark .btn-danger { background-color: #211d2b !important; color: #fda4af !important; }
 html.upi-theme-dark .btn-danger:hover { background-color: #351e2a !important; }
 
-html.upi-theme-dark .brand-wordmark { color: #f8fafc !important; }
-html.upi-theme-dark .brand-wordmark-e { color: #a5b4fc !important; }
+.brand-logo-pad { background-color: #fff; }
 html.upi-theme-dark .site-theme-toggle {
     background-color: #111c2e !important;
     border-color: #334155 !important;
