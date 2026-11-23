@@ -1,4 +1,4 @@
-// e-Mudra Node.js helper. No dependencies (Node 18+).
+// eMudra Node.js helper. No dependencies (Node 18+).
 //
 //   const { EMudra } = require('./emudra');
 //   const api = new EMudra('__GATEWAY_URL__', process.env.EMUDRA_KEY, process.env.EMUDRA_SECRET);
@@ -28,7 +28,7 @@ class EMudra {
       body: body ? JSON.stringify(body) : undefined,
     });
     const json = await res.json().catch(() => null);
-    if (!res.ok || !json || !json.success) throw new Error(`e-Mudra API error (${res.status}): ${json?.message ?? 'no response'}`);
+    if (!res.ok || !json || !json.success) throw new Error(`eMudra API error (${res.status}): ${json?.message ?? 'no response'}`);
     return json.data;
   }
 

@@ -24,7 +24,7 @@
         </div>
         @if ($errors->any() && ! $errors->has('amount'))<p class="text-sm text-red-600 mb-3">{{ $errors->first() }}</p>@endif
         <button class="btn btn-primary w-full py-3">Pay with UPI</button>
-        <p class="mt-4 text-center text-xs text-slate-400">Secured by {{ config('app.name') }}</p>
+        <p class="mt-4 text-center text-xs text-slate-400">Secured by {{ config('app.brand_name', 'eMudra') }}</p>
     </form>
 </div>
 @endsection

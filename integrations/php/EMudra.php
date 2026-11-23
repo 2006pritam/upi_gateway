@@ -1,6 +1,6 @@
 <?php
 /**
- * e-Mudra PHP helper. One file, no dependencies (needs the curl extension).
+ * eMudra PHP helper. One file, no dependencies (needs the curl extension).
  *
  *   $api = new EMudra('__GATEWAY_URL__', 'key_...', 'sec_...');
  *   $order = $api->createOrder(499, 'INV1001', ['customer_name' => 'Asha']);
@@ -50,7 +50,7 @@ class EMudra
 
         $json = is_string($raw) ? json_decode($raw, true) : null;
         if ($code >= 400 || ! is_array($json) || empty($json['success'])) {
-            throw new RuntimeException('e-Mudra API error ('.$code.'): '.($json['message'] ?? 'no response'));
+            throw new RuntimeException('eMudra API error ('.$code.'): '.($json['message'] ?? 'no response'));
         }
 
         return $json['data'];

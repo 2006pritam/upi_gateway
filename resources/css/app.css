@@ -60,6 +60,119 @@
     .kbd  { @apply font-mono text-[13px] bg-slate-100 text-slate-800 rounded px-1.5 py-0.5; }
 }
 
+/* eMudra's midnight-indigo theme; enabled by the shared site toggle. */
+html.upi-theme-dark { color-scheme: dark; background-color: #0b1120; }
+html.upi-theme-dark body { background-color: #0b1120 !important; color: #e2e8f0 !important; }
+html.upi-theme-dark .bg-white,
+html.upi-theme-dark .card { background-color: #111c2e !important; }
+html.upi-theme-dark [class~="bg-white/90"] { background-color: rgb(15 23 42 / .92) !important; }
+html.upi-theme-dark .bg-slate-50 { background-color: #0f172a !important; }
+html.upi-theme-dark .bg-slate-100 { background-color: #1e293b !important; }
+html.upi-theme-dark .bg-slate-200 { background-color: #334155 !important; }
+html.upi-theme-dark .bg-slate-300 { background-color: #475569 !important; }
+html.upi-theme-dark .bg-brand-50 { background-color: #252449 !important; }
+html.upi-theme-dark .bg-brand-100 { background-color: #2d2b54 !important; }
+html.upi-theme-dark .bg-brand-200 { background-color: #38365f !important; }
+html.upi-theme-dark .bg-blue-50 { background-color: #10273b !important; }
+html.upi-theme-dark .bg-blue-100 { background-color: #17334d !important; }
+html.upi-theme-dark .bg-emerald-50 { background-color: #062e2a !important; }
+html.upi-theme-dark .bg-emerald-100 { background-color: #0a3932 !important; }
+html.upi-theme-dark .bg-sky-50 { background-color: #102d40 !important; }
+html.upi-theme-dark .bg-amber-50 { background-color: #342716 !important; }
+html.upi-theme-dark .bg-amber-100 { background-color: #3b2d18 !important; }
+html.upi-theme-dark .bg-red-50 { background-color: #351e2a !important; }
+html.upi-theme-dark .bg-red-100 { background-color: #3d202d !important; }
+html.upi-theme-dark .bg-rose-100 { background-color: #3d1e31 !important; }
+html.upi-theme-dark .bg-violet-100 { background-color: #2b2147 !important; }
+
+html.upi-theme-dark .text-slate-950,
+html.upi-theme-dark .text-slate-900 { color: #f1f5f9 !important; }
+html.upi-theme-dark .text-slate-800 { color: #e2e8f0 !important; }
+html.upi-theme-dark .text-slate-700 { color: #cbd5e1 !important; }
+html.upi-theme-dark .text-slate-600 { color: #b4c0d0 !important; }
+html.upi-theme-dark .text-slate-500,
+html.upi-theme-dark .text-slate-400 { color: #94a3b8 !important; }
+html.upi-theme-dark .text-brand-700 { color: #c7d2fe !important; }
+html.upi-theme-dark .text-brand-600,
+html.upi-theme-dark .text-brand-500 { color: #a5b4fc !important; }
+html.upi-theme-dark .text-brand-300 { color: #c7d2fe !important; }
+html.upi-theme-dark .text-blue-800,
+html.upi-theme-dark .text-blue-600 { color: #93c5fd !important; }
+html.upi-theme-dark .text-emerald-800,
+html.upi-theme-dark .text-emerald-700 { color: #6ee7b7 !important; }
+html.upi-theme-dark .text-emerald-600 { color: #34d399 !important; }
+html.upi-theme-dark .text-emerald-900 { color: #a7f3d0 !important; }
+html.upi-theme-dark .text-sky-700,
+html.upi-theme-dark .text-sky-600,
+html.upi-theme-dark .text-sky-800,
+html.upi-theme-dark .text-sky-900 { color: #7dd3fc !important; }
+html.upi-theme-dark .text-amber-800,
+html.upi-theme-dark .text-amber-700,
+html.upi-theme-dark .text-amber-600 { color: #fcd34d !important; }
+html.upi-theme-dark .text-amber-900,
+html.upi-theme-dark .text-amber-950 { color: #fde68a !important; }
+html.upi-theme-dark .text-red-800,
+html.upi-theme-dark .text-red-700,
+html.upi-theme-dark .text-red-600 { color: #fda4af !important; }
+html.upi-theme-dark .text-red-900 { color: #fecdd3 !important; }
+html.upi-theme-dark .text-rose-700 { color: #fda4af !important; }
+html.upi-theme-dark .text-violet-700 { color: #c4b5fd !important; }
+
+html.upi-theme-dark [class*="border-slate-"] { border-color: #2b394d !important; }
+html.upi-theme-dark [class*="border-blue-"] { border-color: #29445d !important; }
+html.upi-theme-dark [class*="border-emerald-"] { border-color: #23564b !important; }
+html.upi-theme-dark [class*="border-amber-"] { border-color: #5a4727 !important; }
+html.upi-theme-dark [class*="border-red-"] { border-color: #5b2d3e !important; }
+html.upi-theme-dark [class*="ring-slate-"] { --tw-ring-color: rgb(148 163 184 / .24) !important; }
+html.upi-theme-dark [class*="divide-slate-"] > :not([hidden]) ~ :not([hidden]) { border-color: #2b394d !important; }
+html.upi-theme-dark [class*="ring-emerald-"] { --tw-ring-color: rgb(16 185 129 / .28) !important; }
+html.upi-theme-dark [class*="ring-red-"] { --tw-ring-color: rgb(244 63 94 / .32) !important; }
+html.upi-theme-dark [class*="ring-amber-"] { --tw-ring-color: rgb(245 158 11 / .3) !important; }
+html.upi-theme-dark [class*="ring-brand-"] { --tw-ring-color: rgb(99 102 241 / .36) !important; }
+html.upi-theme-dark [class*="ring-sky-"] { --tw-ring-color: rgb(14 165 233 / .3) !important; }
+
+html.upi-theme-dark .card-header { border-color: #253247 !important; }
+html.upi-theme-dark .card-title,
+html.upi-theme-dark .label { color: #e2e8f0 !important; }
+html.upi-theme-dark .help,
+html.upi-theme-dark .th { color: #94a3b8 !important; }
+html.upi-theme-dark .input,
+html.upi-theme-dark select,
+html.upi-theme-dark textarea {
+    background-color: #172235 !important;
+    color: #f1f5f9 !important;
+    --tw-ring-color: #334155 !important;
+}
+html.upi-theme-dark .input::placeholder,
+html.upi-theme-dark textarea::placeholder { color: #94a3b8 !important; }
+html.upi-theme-dark .input:disabled,
+html.upi-theme-dark select:disabled,
+html.upi-theme-dark textarea:disabled { background-color: #1e293b !important; color: #94a3b8 !important; }
+html.upi-theme-dark .kbd { background-color: #1e293b !important; color: #e2e8f0 !important; }
+
+html.upi-theme-dark .btn-secondary {
+    background-color: #172235 !important;
+    color: #e2e8f0 !important;
+    --tw-ring-color: #334155 !important;
+}
+html.upi-theme-dark .btn-secondary:hover { background-color: #223148 !important; }
+html.upi-theme-dark .btn-ghost { color: #cbd5e1 !important; }
+html.upi-theme-dark .btn-ghost:hover { background-color: #1e293b !important; color: #f8fafc !important; }
+html.upi-theme-dark .btn-dark { background-color: #29374d !important; color: #f8fafc !important; }
+html.upi-theme-dark .btn-danger { background-color: #211d2b !important; color: #fda4af !important; }
+html.upi-theme-dark .btn-danger:hover { background-color: #351e2a !important; }
+
+html.upi-theme-dark .brand-wordmark { color: #f8fafc !important; }
+html.upi-theme-dark .brand-wordmark-e { color: #a5b4fc !important; }
+html.upi-theme-dark .site-theme-toggle {
+    background-color: #111c2e !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+    box-shadow: 0 12px 32px rgb(0 0 0 / .4) !important;
+}
+html.upi-theme-dark .site-theme-toggle:hover { background-color: #1e293b !important; }
+html.upi-theme-dark .site-theme-toggle > span:first-child { background-color: #252449 !important; color: #c7d2fe !important; }
+
 @layer base {
     a, button, input, select, textarea {
         @apply focus-visible:outline-none;

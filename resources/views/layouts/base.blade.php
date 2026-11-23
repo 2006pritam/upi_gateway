@@ -4,8 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Dashboard') · {{ config('app.name') }}</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><path d='M18 5 8 18h7l-1 9 10-13h-7z' fill='white'/></svg>">
+    <script nonce="{{ $csp_nonce }}">
+        try { if (localStorage.getItem('upi_checkout_theme') === 'dark') document.documentElement.classList.add('upi-theme-dark'); } catch (e) {}
+    </script>
+    <title>@yield('title', 'Dashboard') · {{ config('app.brand_name', 'eMudra') }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/emudra-mark.svg') }}">
     {{-- Google Fonts: Inter (sans) + JetBrains Mono (code) --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +18,7 @@
 </head>
 <body class="h-full bg-slate-50 text-slate-800 antialiased">
     @yield('body')
+    <x-theme-toggle />
     @stack('scripts')
 </body>
 </html>

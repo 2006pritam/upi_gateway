@@ -54,7 +54,7 @@ class SettingsController extends Controller
 
     public function testTelegram(Request $request, TelegramNotifier $telegram)
     {
-        $ok = $telegram->send($request->user(), '✅ '.config('app.name').': Telegram alerts are working.');
+        $ok = $telegram->send($request->user(), '✅ '.config('app.brand_name', 'eMudra').': Telegram alerts are working.');
 
         return $ok
             ? back()->with('status', 'Test message sent. Check Telegram.')

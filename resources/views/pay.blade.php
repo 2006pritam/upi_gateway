@@ -22,13 +22,6 @@
 
 @push('head')
 <meta name="robots" content="noindex">
-<script nonce="{{ $csp_nonce }}">
-try {
-    if (localStorage.getItem('upi_checkout_theme') === 'dark') {
-        document.documentElement.classList.add('upi-theme-dark');
-    }
-} catch (e) {}
-</script>
 <link rel="stylesheet" href="{{ asset('css/pay.css') }}">
 @endpush
 
@@ -40,19 +33,12 @@ try {
             {{-- Summary --}}
             <div class="md:col-span-2 relative bg-slate-950 text-white p-6 sm:p-8 flex flex-col overflow-hidden">
                 <div class="hero-gradient absolute inset-0 opacity-50"></div>
-                <div class="relative flex items-center justify-between gap-3">
-                    <div class="flex min-w-0 items-center gap-3">
-                        <x-avatar :name="$merchant" size="w-11 h-11 text-base" class="!bg-white/10 !text-white ring-1 ring-white/20" />
-                        <div class="min-w-0">
-                            <div class="text-xs text-slate-400">Paying to</div>
-                            <div class="font-semibold truncate">{{ $merchant }}</div>
-                        </div>
+                <div class="relative flex items-center gap-3">
+                    <x-avatar :name="$merchant" size="w-11 h-11 text-base" class="!bg-white/10 !text-white ring-1 ring-white/20" />
+                    <div class="min-w-0">
+                        <div class="text-xs text-slate-400">Paying to</div>
+                        <div class="font-semibold truncate">{{ $merchant }}</div>
                     </div>
-                    <button id="theme-toggle" type="button" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
-                        <svg id="theme-icon-moon" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8 8.5 8.5 0 1 0 20.2 15.2Z"/></svg>
-                        <svg id="theme-icon-sun" class="hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
-                        <span id="theme-toggle-label">Dark</span>
-                    </button>
                 </div>
 
                 <div class="relative mt-8">
@@ -264,7 +250,7 @@ try {
     </div>
 
     <footer class="pb-6 flex flex-col items-center gap-2 text-xs text-slate-400">
-        <div class="flex items-center gap-1.5"><x-icon name="lock" class="w-3.5 h-3.5" /> Secured by <span class="font-semibold text-slate-500">{{ config('app.name') }}</span></div>
+        <div class="flex items-center gap-1.5"><x-icon name="lock" class="w-3.5 h-3.5" /> Secured by <span class="font-semibold text-slate-500">{{ config('app.brand_name', 'eMudra') }}</span></div>
         <div>Payments go directly to the merchant's bank account via UPI.</div>
     </footer>
 </div>

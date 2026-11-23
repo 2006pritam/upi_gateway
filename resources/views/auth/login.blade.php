@@ -18,5 +18,5 @@
     </label>
     <button class="btn btn-primary w-full py-2.5">Log in <x-icon name="arrow-right" class="w-4 h-4" /></button>
 </form>
-<p class="text-sm text-center text-slate-500 mt-8">New to {{ config('app.name') }}? <a href="{{ route('register') }}" class="font-semibold text-brand-600 hover:text-brand-700">Create a free account</a></p>
+<p class="text-sm text-center text-slate-500 mt-8">New to {{ config('app.brand_name', 'eMudra') }}? <a href="{{ route('register') }}" class="font-semibold text-brand-600 hover:text-brand-700">Create a free account</a></p>
 @endsection

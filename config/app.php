@@ -13,7 +13,8 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'e-Mudra'),
+    'name' => env('APP_NAME', 'eMudra'),
+    'brand_name' => 'eMudra',
 
     /*
     |--------------------------------------------------------------------------

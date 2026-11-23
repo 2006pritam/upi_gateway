@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: e-Mudra UPI Gateway for WooCommerce
- * Description: Accept UPI payments through your e-Mudra gateway.
+ * Plugin Name: eMudra UPI Gateway for WooCommerce
+ * Description: Accept UPI payments through your eMudra gateway.
  * Version: 1.0.0
  * Requires Plugins: woocommerce
  */
@@ -25,7 +25,7 @@ add_action('plugins_loaded', function () {
         public function __construct()
         {
             $this->id = 'emudra';
-            $this->method_title = 'e-Mudra UPI';
+            $this->method_title = 'eMudra UPI';
             $this->method_description = 'Pay with any UPI app. Webhook URL: '.WC()->api_request_url('emudra_webhook');
             $this->has_fields = false;
             $this->init_form_fields();
@@ -40,7 +40,7 @@ add_action('plugins_loaded', function () {
         public function init_form_fields()
         {
             $this->form_fields = [
-                'enabled' => ['title' => 'Enable', 'type' => 'checkbox', 'label' => 'Enable e-Mudra UPI', 'default' => 'no'],
+                'enabled' => ['title' => 'Enable', 'type' => 'checkbox', 'label' => 'Enable eMudra UPI', 'default' => 'no'],
                 'title' => ['title' => 'Title', 'type' => 'text', 'default' => 'UPI (GPay, PhonePe, Paytm, BHIM)'],
                 'base_url' => ['title' => 'Gateway URL', 'type' => 'text', 'default' => '__GATEWAY_URL__'],
                 'api_key' => ['title' => 'API key', 'type' => 'text'],
@@ -106,7 +106,7 @@ add_action('plugins_loaded', function () {
             $data = $this->call('GET', '/api/v1/orders/'.rawurlencode($gw));
             if ($data && $data['status'] === 'paid' && abs((float) $data['amount'] - (float) $order->get_total()) < 0.01) {
                 $order->payment_complete($data['utr'] ?: $gw);
-                $order->add_order_note('Paid via e-Mudra. UTR: '.($data['utr'] ?: 'n/a'));
+                $order->add_order_note('Paid via eMudra. UTR: '.($data['utr'] ?: 'n/a'));
 
                 return true;
             }

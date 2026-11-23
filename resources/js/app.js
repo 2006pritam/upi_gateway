@@ -19,6 +19,30 @@ document.addEventListener('click', async (e) => {
     setTimeout(() => label.textContent = original, 1500);
 });
 
+const themeRoot = document.documentElement;
+const themeButton = document.getElementById('site-theme-toggle');
+if (themeButton) {
+    const themeLabel = document.getElementById('site-theme-label');
+    const moonIcon = document.getElementById('site-theme-moon');
+    const sunIcon = document.getElementById('site-theme-sun');
+    const syncThemeButton = (dark) => {
+        themeButton.setAttribute('aria-pressed', String(dark));
+        themeButton.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+        themeButton.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+        if (themeLabel) themeLabel.textContent = dark ? 'Light mode' : 'Dark mode';
+        if (moonIcon) moonIcon.classList.toggle('hidden', dark);
+        if (sunIcon) sunIcon.classList.toggle('hidden', !dark);
+    };
+    const currentThemeIsDark = themeRoot.classList.contains('upi-theme-dark');
+    syncThemeButton(currentThemeIsDark);
+    themeButton.addEventListener('click', () => {
+        const dark = !themeRoot.classList.contains('upi-theme-dark');
+        themeRoot.classList.toggle('upi-theme-dark', dark);
+        try { localStorage.setItem('upi_checkout_theme', dark ? 'dark' : 'light'); } catch (e) {}
+        syncThemeButton(dark);
+    });
+}
+
 document.addEventListener('click', (event) => {
     const confirmButton = event.target.closest('[data-confirm]');
     if (confirmButton && !window.confirm(confirmButton.dataset.confirm)) {

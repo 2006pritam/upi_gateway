@@ -303,7 +303,7 @@ For command-line or development deployments, configure the following variables i
 
 | Variable | Description | Example |
 |---|---|---|
-| `APP_NAME` | Application name | UPI Gateway |
+| `APP_NAME` | Application name | eMudra |
 | `APP_ENV` | Application environment | production |
 | `APP_DEBUG` | Debug mode | false |
 | `APP_URL` | Application URL | https://example.com |

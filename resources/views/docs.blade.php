@@ -83,7 +83,7 @@
                     <span class="text-xs font-bold uppercase tracking-widest text-brand-600">Getting Started</span>
                 </div>
                 <h2 class="text-3xl font-bold tracking-tight text-slate-900">Introduction</h2>
-                <p class="mt-4 text-slate-600">The {{ config('app.name') }} API lets you create UPI payment orders, redirect customers to a hosted checkout, and receive signed webhooks when payments complete. All API calls are server-to-server — never expose your secret in a browser or mobile app.</p>
+                <p class="mt-4 text-slate-600">The {{ config('app.brand_name', 'eMudra') }} API lets you create UPI payment orders, redirect customers to a hosted checkout, and receive signed webhooks when payments complete. All API calls are server-to-server — never expose your secret in a browser or mobile app.</p>
 
                 <div class="mt-6 grid sm:grid-cols-3 gap-4">
                     @foreach ([
@@ -524,7 +524,7 @@ Content-Type: application/json"])
                 <h2 class="text-2xl font-bold tracking-tight text-slate-900">Plugins &amp; helpers</h2>
                 <p class="mt-3 text-slate-600">Ready-made integrations, so you don't write the API calls yourself.</p>
                 <ul class="mt-4 space-y-3">
-                    <li><a class="text-brand-600 font-medium" href="{{ route('integrations.download', 'woocommerce') }}">WooCommerce / WordPress plugin</a><span class="text-slate-500"> — copy to <code class="kbd">wp-content/plugins/emudra-gateway/</code>, activate, then WooCommerce → Settings → Payments → {{ config('app.name') }}. Enter this site's URL, your API key and secret, and set the webhook URL shown in the plugin.</span></li>
+                    <li><a class="text-brand-600 font-medium" href="{{ route('integrations.download', 'woocommerce') }}">WooCommerce / WordPress plugin</a><span class="text-slate-500"> — copy to <code class="kbd">wp-content/plugins/emudra-gateway/</code>, activate, then WooCommerce → Settings → Payments → {{ config('app.brand_name', 'eMudra') }}. Enter this site's URL, your API key and secret, and set the webhook URL shown in the plugin.</span></li>
                     <li><a class="text-brand-600 font-medium" href="{{ route('integrations.download', 'php') }}">PHP helper</a><span class="text-slate-500"> — one file: <code class="kbd">createOrder()</code>, <code class="kbd">getOrder()</code> and <code class="kbd">verifyWebhook()</code>.</span></li>
                     <li><a class="text-brand-600 font-medium" href="{{ route('integrations.download', 'node') }}">Node.js helper</a><span class="text-slate-500"> — same three functions, no dependencies (Node 18+).</span></li>
                 </ul>

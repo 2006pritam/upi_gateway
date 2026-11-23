@@ -167,7 +167,7 @@
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="th text-left w-1/2">Feature</th>
-                            <th class="th text-center text-brand-700">{{ config('app.name') }}</th>
+                            <th class="th text-center text-brand-700">{{ config('app.brand_name', 'eMudra') }}</th>
                             <th class="th text-center text-slate-500">Traditional PG</th>
                         </tr>
                     </thead>
@@ -411,7 +411,7 @@
     {{-- CTA bottom strip --}}
     <div class="bg-brand-600 py-3.5">
         <div class="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p class="flex items-center gap-2 text-white text-sm font-medium"><x-icon name="bolt" class="w-4 h-4" /> Join hundreds of merchants already using {{ config('app.name') }}</p>
+            <p class="flex items-center gap-2 text-white text-sm font-medium"><x-icon name="bolt" class="w-4 h-4" /> Join hundreds of merchants already using {{ config('app.brand_name', 'eMudra') }}</p>
             <a href="{{ route('register') }}" class="btn bg-white text-brand-700 hover:bg-brand-50 shrink-0 text-sm">Get started free <x-icon name="arrow-right" class="w-4 h-4" /></a>
         </div>
     </div>
@@ -420,7 +420,7 @@
         <div class="mx-auto max-w-6xl px-4 sm:px-6 py-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
             <div class="lg:col-span-2">
                 <x-logo dark />
-                <p class="mt-4 text-sm leading-relaxed max-w-sm">{{ config('app.name') }} is a dynamic QR and payment verification service. Not a payment aggregator — payments go directly to your own UPI account.</p>
+                <p class="mt-4 text-sm leading-relaxed max-w-sm">{{ config('app.brand_name', 'eMudra') }} is a dynamic QR and payment verification service. Not a payment aggregator — payments go directly to your own UPI account.</p>
                 <div class="mt-6 flex gap-3">
                     <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Get started</a>
                     <a href="{{ route('docs') }}" class="btn bg-white/10 text-white hover:bg-white/20 btn-sm">API Docs</a>
@@ -446,7 +446,7 @@
         </div>
         <div class="border-t border-slate-800 py-5">
             <div class="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-                <span>© {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</span>
+                <span>© {{ date('Y') }} {{ config('app.brand_name', 'eMudra') }}. All rights reserved.</span>
                 <span>Built with <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="inline w-4 h-4 text-red-500 align-text-bottom" aria-hidden="true"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z"/></svg> for Indian merchants by <a href="https://github.com/mynkdev-21/" target="_blank" rel="noopener" class="text-slate-400 hover:text-white transition-colors font-medium">Mayank Singh</a></span>
             </div>
         </div>

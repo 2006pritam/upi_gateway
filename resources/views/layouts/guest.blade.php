@@ -19,7 +19,7 @@
             </ul>
         </div>
 
-        <div class="relative text-xs text-slate-400">© {{ date('Y') }} {{ config('app.name') }}</div>
+        <div class="relative text-xs text-slate-400">© {{ date('Y') }} {{ config('app.brand_name', 'eMudra') }}</div>
     </div>
 
     {{-- Form --}}

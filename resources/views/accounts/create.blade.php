@@ -105,7 +105,7 @@
     <div class="space-y-4">
         <div class="card p-5">
             <div class="flex items-center gap-2 text-sm font-semibold text-slate-900"><x-icon name="shield" class="w-5 h-5 text-emerald-600" /> Your money stays yours</div>
-            <p class="mt-2 text-sm text-slate-600">Payments go straight to your own UPI or PG account. {{ config('app.name') }} only creates the payment and checks its status. We never hold or settle funds.</p>
+            <p class="mt-2 text-sm text-slate-600">Payments go straight to your own UPI or PG account. {{ config('app.brand_name', 'eMudra') }} only creates the payment and checks its status. We never hold or settle funds.</p>
         </div>
         <div class="card p-5" data-for="paytm_business">
             <div class="flex items-center gap-2 text-sm font-semibold text-slate-900"><x-icon name="bolt" class="w-5 h-5 text-sky-600" /> How Paytm Business verification works</div>
