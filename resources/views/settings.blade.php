@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'API & Webhooks')
-@section('subtitle', 'Connect your website or app to accept payments automatically.')
+@section('subtitle', 'Set up your website payment connection. Share the details below privately with the person who manages your website.')
 @section('actions')
-    <a href="{{ route('docs') }}" class="btn btn-secondary"><x-icon name="book" class="w-4 h-4" /> Read API docs</a>
+    <a href="{{ route('docs') }}" class="btn btn-secondary"><x-icon name="book" class="w-4 h-4" /> Setup guide</a>
 @endsection
 
 @section('content')
@@ -10,84 +10,90 @@
     {{-- Two clear environments: Live and Sandbox --}}
     <section>
         <div class="mb-5">
-            <h2 class="text-base font-semibold text-slate-900">Your API connections</h2>
-            <p class="mt-1 text-sm text-slate-500">Set up one Live connection for real payments and one Sandbox connection for testing. Each has its own API credentials and webhook URL.</p>
+            <h2 class="text-base font-semibold text-slate-900">Choose how you want to connect</h2>
+            <p class="mt-1 text-sm text-slate-500">Start with Sandbox to test safely. Switch to Live when you are ready to accept real payments. You can copy the connection details here and share them privately with your website developer.</p>
+            <div class="mt-3 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <b class="text-slate-800">Quick guide:</b> Use <b>Test safely first</b> while setting up. Use <b>Accept real payments</b> only when your website is ready. A payment-updates address (webhook URL) is optional—ask your developer for it, or leave it blank for now.
+            </div>
         </div>
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div class="card p-6 space-y-5">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-base font-semibold text-slate-900">Live API</h3>
-                        <p class="mt-1 text-xs text-slate-500">For real customer payments</p>
+                        <h3 class="text-base font-semibold text-slate-900">Accept real payments</h3>
+                        <p class="mt-1 text-xs text-slate-500">Use this after your website is ready to go live.</p>
                     </div>
-                    <span class="badge bg-emerald-50 text-emerald-700">LIVE</span>
+                    <span class="badge bg-emerald-50 text-emerald-700">REAL PAYMENTS</span>
                 </div>
                 <div>
-                    <label class="label">API key</label>
+                    <label class="label">Connection key (API key)</label>
                     <div class="flex gap-2"><input readonly value="{{ $user->api_key }}" class="input font-mono bg-slate-50"><x-copy :text="$user->api_key" /></div>
                 </div>
                 <div>
-                    <label class="label">API secret</label>
+                    <label class="label">Private secret (API secret)</label>
                     <div class="flex gap-2">
                         <input id="secret" type="password" readonly value="{{ $user->api_secret }}" class="input font-mono bg-slate-50">
                         <button type="button" class="btn btn-secondary btn-sm" data-toggle-secret><x-icon name="eye" class="w-4 h-4" /> Reveal</button>
                         <x-copy :text="$user->api_secret" />
                     </div>
-                    <p class="help">Keep this secret on your server. It also signs Live webhooks.</p>
+                    <p class="help">This is like a password for your payment connection. Share it only with your trusted developer—never post it publicly.</p>
                 </div>
-                <form method="POST" action="{{ route('settings.regenerate') }}" class="flex items-center justify-between gap-3 rounded-lg bg-red-50/60 ring-1 ring-red-100 px-4 py-3">
-                    @csrf
-                    <div class="text-sm text-red-800"><b>Reset Live credentials</b><div class="text-xs text-red-700/80">The old credentials stop working immediately.</div></div>
-                    <button data-confirm="Old keys will stop working immediately. Continue?" class="btn btn-danger btn-sm"><x-icon name="refresh" class="w-4 h-4" /> Reset</button>
-                </form>
+                <details class="rounded-lg bg-slate-50 px-4 py-3">
+                    <summary class="cursor-pointer text-sm font-medium text-slate-700">Need to replace the Live connection details?</summary>
+                    <form method="POST" action="{{ route('settings.regenerate') }}" class="mt-3 flex items-center justify-between gap-3 rounded-lg bg-red-50/60 ring-1 ring-red-100 px-4 py-3">
+                        @csrf
+                        <div class="text-sm text-red-800"><b>Replace Live details</b><div class="text-xs text-red-700/80">The old details stop working immediately. Your developer must update them too.</div></div>
+                        <button data-confirm="Old keys will stop working immediately. Continue?" class="btn btn-danger btn-sm"><x-icon name="refresh" class="w-4 h-4" /> Replace</button>
+                    </form>
+                </details>
                 <form method="POST" action="{{ route('settings.webhook') }}" class="border-t border-slate-100 pt-5">
                     @csrf
-                    <x-input name="webhook_url" label="Live webhook URL" type="url" :value="$user->webhook_url" placeholder="https://yoursite.com/upi/webhook" class="font-mono" help="Receives payment events. Verify the X-Signature header. Retries are automatic." />
-                    <div class="flex justify-end"><button class="btn btn-primary">Save Live webhook</button></div>
+                    <x-input name="webhook_url" label="Where should we send Live payment updates? (webhook URL)" type="url" :value="$user->webhook_url" placeholder="Ask your developer for this address" class="font-mono" help="Your developer provides this address so your website can be told when a payment succeeds or expires. Leave blank if you do not use payment updates." />
+                    <div class="flex justify-end"><button class="btn btn-primary">Save payment updates address</button></div>
                 </form>
             </div>
 
             <div class="card p-6 space-y-5 ring-amber-200">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-base font-semibold text-slate-900">Sandbox API</h3>
-                        <p class="mt-1 text-xs text-slate-500">Test without real payments</p>
+                        <h3 class="text-base font-semibold text-slate-900">Test safely first</h3>
+                        <p class="mt-1 text-xs text-slate-500">Sandbox payments are pretend; no money moves.</p>
                     </div>
-                    <span class="badge bg-amber-100 text-amber-800">TEST</span>
+                    <span class="badge bg-amber-100 text-amber-800">TEST ONLY</span>
                 </div>
                 @if ($user->sandbox_api_key)
                     <div>
-                        <label class="label">API key</label>
+                        <label class="label">Connection key (API key)</label>
                         <div class="flex gap-2"><input readonly value="{{ $user->sandbox_api_key }}" class="input font-mono bg-amber-50"><x-copy :text="$user->sandbox_api_key" /></div>
                     </div>
                     @if (session('sandbox_api_secret_once_encrypted'))
                         @php $sandboxSecretOnce = Crypt::decryptString(session('sandbox_api_secret_once_encrypted')); @endphp
                         <div class="rounded-lg bg-amber-50 p-4 ring-1 ring-amber-300">
-                            <label class="label">API secret · shown once</label>
+                            <label class="label">Private secret (API secret) · shown once</label>
                             <div class="flex gap-2"><input readonly value="{{ $sandboxSecretOnce }}" class="input font-mono bg-white"><x-copy :text="$sandboxSecretOnce" /></div>
-                            <p class="mt-2 text-xs font-medium text-amber-800">Copy this now. It cannot be shown again.</p>
+                            <p class="mt-2 text-xs font-medium text-amber-800">Copy and save this now. It cannot be shown again. Share it only with your trusted developer.</p>
                         </div>
                     @else
-                        <p class="text-sm text-slate-500">Your Sandbox secret is stored encrypted and cannot be viewed again. Reset it if lost.</p>
+                        <p class="text-sm text-slate-500">Your test secret is private and cannot be viewed again. If you did not save it, replace the test details to get a new one.</p>
                     @endif
                     <div class="flex flex-wrap justify-end gap-2">
                         <form method="POST" action="{{ route('settings.sandbox.revoke') }}">@csrf
                             <button data-confirm="Revoke Sandbox credentials? Existing TEST integrations will stop working." class="btn btn-danger btn-sm">Revoke</button>
                         </form>
                         <form method="POST" action="{{ route('settings.sandbox.regenerate') }}">@csrf
-                            <button data-confirm="Regenerate Sandbox credentials? The old TEST credentials will stop working." class="btn btn-secondary btn-sm">Reset Sandbox API</button>
+                            <button data-confirm="Regenerate Sandbox credentials? The old TEST credentials will stop working." class="btn btn-secondary btn-sm">Replace test details</button>
                         </form>
                     </div>
                 @else
-                    <p class="text-sm text-slate-600">Create a test key and secret to start using Sandbox.</p>
+                    <p class="text-sm text-slate-600">Create test details to try the payment flow before accepting real payments. Test transactions do not move money.</p>
                     <form method="POST" action="{{ route('settings.sandbox.regenerate') }}" class="flex justify-end">@csrf
-                        <button class="btn btn-primary">Create Sandbox API</button>
+                        <button class="btn btn-primary">Create test details</button>
                     </form>
                 @endif
                 <form method="POST" action="{{ route('settings.sandbox.webhook') }}" class="border-t border-slate-100 pt-5">
                     @csrf
-                    <x-input name="sandbox_webhook_url" label="Sandbox webhook URL" type="url" :value="$user->sandbox_webhook_url" placeholder="https://sandbox.yoursite.com/webhook" class="font-mono" help="Use a separate URL from Live. Test events are signed with the Sandbox secret." />
-                    <div class="flex justify-end"><button class="btn btn-primary">Save Sandbox webhook</button></div>
+                    <x-input name="sandbox_webhook_url" label="Where should we send test payment updates?" type="url" :value="$user->sandbox_webhook_url" placeholder="Ask your developer for this address" class="font-mono" help="Use the test address supplied by your developer. It must be different from the Live address." />
+                    <div class="flex justify-end"><button class="btn btn-primary">Save test updates address</button></div>
                 </form>
             </div>
         </div>
@@ -130,8 +136,9 @@
         </div>
     </details>
 
-    {{-- Profile --}}
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
+    <details class="card p-5">
+        <summary class="cursor-pointer text-sm font-semibold text-slate-800">Optional: business profile</summary>
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
         <div>
             <h2 class="text-base font-semibold text-slate-900">Business profile</h2>
             <p class="mt-1 text-sm text-slate-500">Your business name is shown to customers on the checkout page.</p>
@@ -150,6 +157,7 @@
             <div class="flex justify-end"><button class="btn btn-primary">Save profile</button></div>
         </form>
     </section>
+    </details>
     {{-- Saved website/app API keys --}}
     @php $namedKeys = $user->apiKeys()->orderByRaw('revoked_at is not null')->latest('id')->get(); @endphp
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -170,10 +178,10 @@
 
             <form method="POST" action="{{ route('api-keys.store') }}" class="grid sm:grid-cols-6 gap-3 items-end">
                 @csrf
-                <div class="sm:col-span-3"><label class="label">Website / app name</label><input name="name" value="{{ old('name') }}" maxlength="60" required class="input" placeholder="e.g. Academy website"></div>
-                <div class="sm:col-span-2"><label class="label">Type</label><select name="environment" class="input"><option value="live">Live</option><option value="sandbox">Sandbox (test)</option></select></div>
-                <button class="btn btn-primary sm:col-span-1">Create</button>
-                <div class="sm:col-span-6"><label class="label">Webhook URL for this site <span class="text-slate-400 font-normal">(optional)</span></label><input name="webhook_url" value="{{ old('webhook_url') }}" maxlength="500" class="input font-mono" placeholder="https://yoursite.com/payment-webhook"></div>
+                <div class="sm:col-span-3"><label class="label">Website or app name</label><input name="name" value="{{ old('name') }}" maxlength="60" required class="input" placeholder="e.g. Academy website"></div>
+                <div class="sm:col-span-2"><label class="label">Use for</label><select name="environment" class="input"><option value="live">Real payments (Live)</option><option value="sandbox">Testing only (Sandbox)</option></select></div>
+                <button class="btn btn-primary sm:col-span-1">Create site key</button>
+                <div class="sm:col-span-6"><label class="label">Payment-updates address <span class="text-slate-400 font-normal">(optional; ask your developer)</span></label><input name="webhook_url" value="{{ old('webhook_url') }}" maxlength="500" class="input font-mono" placeholder="Enter the address your developer provides"></div>
                 @error('name')<p class="sm:col-span-6 text-sm text-red-600">{{ $message }}</p>@enderror
                 @error('webhook_url')<p class="sm:col-span-6 text-sm text-red-600">{{ $message }}</p>@enderror
             </form>
@@ -217,11 +225,12 @@
         </div>
     </section>
 
-    {{-- Alerts --}}
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <details class="card p-5">
+        <summary class="cursor-pointer text-sm font-semibold text-slate-800">Optional: payment notifications</summary>
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
         <div>
-            <h2 class="text-base font-semibold text-slate-900">Alerts</h2>
-            <p class="mt-1 text-sm text-slate-500">Get a Telegram message the moment a payment arrives, and an e-mail summary every morning.</p>
+            <h2 class="text-base font-semibold text-slate-900">Payment notifications</h2>
+            <p class="mt-1 text-sm text-slate-500">Optional: receive a Telegram message when a payment arrives, or an email summary each morning.</p>
         </div>
         <div class="card p-6 lg:col-span-2">
             <form method="POST" action="{{ route('settings.alerts') }}" class="space-y-4">
@@ -245,5 +254,6 @@
             @endif
         </div>
     </section>
+    </details>
 </div>
 @endsection
