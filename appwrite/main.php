@@ -76,7 +76,8 @@ function emudra_static(string $path, $res)
 function emudra_request($req): Request
 {
     $headers = array_change_key_case((array) $req->headers, CASE_LOWER);
-    $host = $headers['x-forwarded-host'] ?? $req->host ?? 'localhost';
+    // Pin the public host to APP_URL (also blocks Host-header spoofing); fall back to the forwarded host.
+    $host = parse_url((string) getenv('APP_URL'), PHP_URL_HOST) ?: ($headers['x-forwarded-host'] ?? $req->host ?? 'localhost');
     $path = $req->path ?: '/';
     $query = (string) ($req->queryString ?? '');
     $body = (string) ($req->bodyRaw ?? '');
