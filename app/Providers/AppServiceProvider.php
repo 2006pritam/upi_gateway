@@ -9,7 +9,13 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // Hosts without pdo_pgsql (e.g. Appwrite Functions) use a pure-PHP PostgreSQL driver.
+        if (filter_var(env('DB_PURE_PHP', false), FILTER_VALIDATE_BOOLEAN)) {
+            $this->app->bind('db.connector.pgsql', fn () => new \App\Support\PurePg\PurePgConnector);
+        }
+    }
 
     public function boot(): void
     {
