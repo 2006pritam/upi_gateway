@@ -39,6 +39,7 @@
             <x-input name="customer_mobile" label="Customer mobile" placeholder="Optional" />
         </div>
         <x-input name="note" label="Payment note" maxlength="50" placeholder="e.g. Invoice #1024" help="Shown to the customer in their UPI app." />
+        <x-input name="redirect_url" label="Customer return page after checkout (optional)" type="url" :value="old('redirect_url')" placeholder="https://yourstore.com/payment-complete" help="After checkout finishes, return the customer to this HTTPS page. First allow its domain in Settings → API & Webhooks → Customer return after payment." />
 
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 mt-2 pt-5">
             <a href="{{ route('orders.index') }}" class="btn btn-secondary">Cancel</a>

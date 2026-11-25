@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -54,7 +55,14 @@ class OrderController extends Controller
             'customer_name' => ['nullable', 'string', 'max:100'],
             'customer_mobile' => ['nullable', 'string', 'max:20'],
             'note' => ['nullable', 'string', 'max:50'],
+            'redirect_url' => ['nullable', 'url:https', 'max:500'],
         ]);
+
+        if (! empty($data['redirect_url']) && ! $request->user()->isRedirectUrlAllowed($data['redirect_url'])) {
+            throw ValidationException::withMessages([
+                'redirect_url' => 'Add this website domain in Settings → API & Webhooks → Customer return after payment first.',
+            ]);
+        }
 
         $order = $this->orders->create($request->user(), $data);
 

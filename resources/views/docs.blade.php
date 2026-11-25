@@ -162,7 +162,7 @@ Content-Type: application/json"])
                             @foreach ([
                                 ['amount', 'number', true, 'Amount in INR (₹1 – ₹1,00,000). Up to 2 decimal places.'],
                                 ['client_order_id', 'string', true, 'Your unique order ID. Allowed: A–Z, 0–9, _ and -. Max 64 chars.'],
-                                ['redirect_url', 'HTTPS URL', false, 'Max 500 chars. Its host must be in your Settings allowlist.'],
+                                ['redirect_url', 'HTTPS URL', false, 'Optional customer return page. Max 500 chars. First allow its hostname in Dashboard → API & Webhooks → Customer return after payment. When the order is paid or expires, eMudra appends order_id, client_order_id, and status. Confirm payment through the API or a verified webhook, not the browser redirect alone.'],
                                 ['customer_name', 'string', false, 'Max 100 chars.'],
                                 ['customer_email', 'email', false, 'Valid email, max 255 chars.'],
                                 ['customer_mobile', 'string', false, 'Max 20 chars.'],

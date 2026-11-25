@@ -158,6 +158,22 @@
         </form>
     </section>
     </details>
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div>
+            <h2 class="text-base font-semibold text-slate-900">Customer return after payment</h2>
+            <p class="mt-1 text-sm text-slate-500">Choose which website domains are allowed as return pages on your payment links and API orders.</p>
+        </div>
+        <form method="POST" action="{{ route('settings.redirect-domains') }}" class="card p-6 lg:col-span-2">
+            @csrf
+            @php $redirectDomainsValue = implode("\n", $user->allowedRedirectDomains()); @endphp
+            <label for="redirect_domains" class="label">Allowed website domains</label>
+            <textarea id="redirect_domains" name="redirect_domains" rows="3" maxlength="2000" class="input font-mono" placeholder="yourstore.com&#10;shop.example.com">{{ old('redirect_domains', $redirectDomainsValue) }}</textarea>
+            <p class="help">Enter one hostname per line (or separate with commas), without a path. Allowing <span class="font-mono">example.com</span> also allows its subdomains. Return URLs must use HTTPS.</p>
+            @error('redirect_domains')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+            <div class="mt-4 flex justify-end"><button class="btn btn-primary">Save allowed domains</button></div>
+            <p class="mt-4 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">When an order is paid or expires, the customer’s browser returns to the URL supplied for that order. eMudra adds <code class="kbd">order_id</code>, <code class="kbd">client_order_id</code>, and <code class="kbd">status</code> to the URL. Confirm payment with your API or a verified webhook; do not rely on the browser redirect alone.</p>
+        </form>
+    </section>
     {{-- Saved website/app API keys --}}
     @php $namedKeys = $user->apiKeys()->orderByRaw('revoked_at is not null')->latest('id')->get(); @endphp
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">

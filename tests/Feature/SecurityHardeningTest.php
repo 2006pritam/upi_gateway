@@ -250,6 +250,55 @@ class SecurityHardeningTest extends TestCase
             ->assertJsonValidationErrors('redirect_url');
     }
 
+    public function test_dashboard_can_save_allowed_redirect_domains(): void
+    {
+        $merchant = $this->merchant();
+
+        $this->actingAs($merchant)->post('/settings/redirect-domains', [
+            'redirect_domains' => "https://shop.test\ncheckout.shop.test",
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(['shop.test', 'checkout.shop.test'], $merchant->fresh()->allowedRedirectDomains());
+    }
+
+    public function test_dashboard_rejects_malformed_redirect_domains(): void
+    {
+        $merchant = $this->merchant();
+
+        $this->actingAs($merchant)->post('/settings/redirect-domains', [
+            'redirect_domains' => 'shop.test/thanks',
+        ])->assertSessionHasErrors('redirect_domains');
+
+        $this->assertSame([], $merchant->fresh()->allowedRedirectDomains());
+    }
+
+    public function test_manual_payment_link_redirect_requires_an_allowed_domain(): void
+    {
+        $merchant = $this->merchant();
+
+        $this->actingAs($merchant)->post('/orders', [
+            'amount' => 100,
+            'redirect_url' => 'https://shop.test/thanks',
+        ])->assertSessionHasErrors('redirect_url');
+
+        $this->assertDatabaseMissing('orders', [
+            'user_id' => $merchant->id,
+            'redirect_url' => 'https://shop.test/thanks',
+        ]);
+
+        $merchant->update(['redirect_domains' => ['shop.test']]);
+
+        $this->actingAs($merchant)->post('/orders', [
+            'amount' => 100,
+            'redirect_url' => 'https://shop.test/thanks',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('orders', [
+            'user_id' => $merchant->id,
+            'redirect_url' => 'https://shop.test/thanks',
+        ]);
+    }
+
     // ── 5. Admin read-only — cannot mark merchant orders paid ────────────────
 
     public function test_admin_cannot_mark_merchant_order_paid(): void

@@ -195,15 +195,28 @@ class SettingsController extends Controller
             'redirect_domains' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        // Parse newline/comma-separated list into an array of clean hostnames.
+        // Parse newline/comma-separated input into explicit hostnames.
         $raw = $data['redirect_domains'] ?? '';
-        $domains = array_values(array_filter(
-            array_map(
-                fn ($d) => preg_replace('#^https?://#', '', strtolower(trim($d))),
-                preg_split('/[\n,]+/', $raw)
-            ),
-            fn ($d) => $d !== '' && preg_match('/^[a-z0-9.\-]+$/', $d)
-        ));
+        $domains = array_values(array_filter(array_map(
+            fn ($domain) => strtolower(trim(preg_replace('#^https?://#i', '', $domain))),
+            preg_split('/[\n,]+/', $raw) ?: []
+        ), fn ($domain) => $domain !== ''));
+
+        foreach ($domains as $domain) {
+            $isIp = filter_var($domain, FILTER_VALIDATE_IP) !== false;
+            $isHostname = strlen($domain) <= 253 && preg_match(
+                '/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$/i',
+                $domain
+            );
+
+            if (! $isIp && ! $isHostname) {
+                throw ValidationException::withMessages([
+                    'redirect_domains' => 'Enter hostnames only (for example, shop.example.com). Do not include a path, port, wildcard, or query string.',
+                ]);
+            }
+        }
+
+        $domains = array_values(array_unique($domains));
 
         $request->user()->update(['redirect_domains' => $domains ?: null]);
 
