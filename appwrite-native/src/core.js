@@ -197,6 +197,7 @@ export async function checkOrder(order, force = false) {
       try { result = await verifiers[account.provider](order, account, ctx); } catch (e) { result = { paid: false, raw: { error: e.message } }; }
       await recordCheck(account, !( !result.paid && result.raw?.error)).catch(() => {});
       if (result.paid) return markPaid(order, result.utr, result.txnId, result.raw, 'provider');
+      if (result.raw && Object.keys(result.raw).length) order = await db.update('orders', order.id, { providerResponse: JSON.stringify(result.raw).slice(0, 3000) }).catch(() => order);
     }
   }
   if (isPastExpiry(order)) return expireOrder(order);

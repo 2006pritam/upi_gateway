@@ -114,21 +114,22 @@ export const verifiers = {
         }
       } finally { lock.release(); }
       await client.logout();
-    } catch (e) { try { client.close(); } catch { /* ignore */ } return pending({ error: 'IMAP check failed' }); }
+    } catch (e) { try { client.close(); } catch { /* ignore */ } return pending({ error: `IMAP check failed: ${String(e.responseText || e.message || e).slice(0, 160)}` }); }
 
     const expected = toPaise(payable(order));
+    const skips = [];
     for (const source of msgs.reverse()) {
-      let mail; try { mail = await simpleParser(source); } catch { continue; }
+      let mail; try { mail = await simpleParser(source); } catch { skips.push('unparsable'); continue; }
       const from = (mail.from?.value?.[0]?.address || '').toLowerCase();
-      if (!(from === sender || (sender.startsWith('@') && from.endsWith(sender)))) continue;
+      if (!(from === sender || (sender.startsWith('@') && from.endsWith(sender)))) { skips.push('sender ' + from); continue; }
       const auth = String(mail.headers.get('authentication-results') || '');
       const dom = from.split('@')[1].replace(/\./g, '\\.');
-      if (!(new RegExp(`\\bdkim=pass\\b[^;]*?\\bheader\\.(?:d|i)=@?(?:[a-z0-9\\-]+\\.)*${dom}(?![a-z0-9.\\-])`, 'i').test(auth) && /\bspf=pass\b/i.test(auth))) continue;
+      if (!(new RegExp(`\\bdkim=pass\\b[^;]*?\\bheader\\.(?:d|i)=@?(?:[a-z0-9\\-]+\\.)*${dom}(?![a-z0-9.\\-])`, 'i').test(auth) && /\bspf=pass\b/i.test(auth))) { skips.push('dkim/spf not pass: ' + auth.replace(/\s+/g, ' ').slice(0, 160)); continue; }
       const text = `${mail.subject || ''}\n${mail.text || ''}`.replace(/\s+/g, ' ').trim();
-      if (!/\b(?:received|credited|paid\s+you|sent\s+you|added\s+to\s+your|money\s+received|payment\s+received)\b/i.test(text)) continue;
+      if (!/\b(?:received|credited|paid\s+you|sent\s+you|added\s+to\s+your|money\s+received|payment\s+received)\b/i.test(text)) { skips.push('not a credit mail: ' + text.slice(0, 80)); continue; }
       if (/\b(?:you\s+paid|you\s+sent|debited\s+from|transferred\s+to)\b/i.test(text)) continue;
       const am = text.match(/(?:₹|Rs\.?|INR)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
-      if (!am || toPaise(am[1].replace(/,/g, '')) !== expected) continue;
+      if (!am || toPaise(am[1].replace(/,/g, '')) !== expected) { skips.push('amount ' + (am ? am[1] : 'none') + ' != ' + expected / 100); continue; }
       const date = mail.date ? new Date(mail.date) : null;
       if (date && (date < new Date(new Date(order.createdAt).getTime() - 120000) || date > new Date(new Date(order.expiresAt).getTime() + 3600000))) continue;
       const um = text.match(/\b(?:UTR|UPI\s*Ref(?:erence)?(?:\s*(?:No|Number|ID))?|Ref(?:erence)?\s*(?:No|Number|ID)|Bank\s*Ref(?:erence)?|Transaction\s*ID|Txn\s*ID)\s*[:#-]?\s*([0-9]{12})\b/i) || text.match(/\b([0-9]{12})\b/);
@@ -139,7 +140,7 @@ export const verifiers = {
       if (!byOrder && !byUtr && !(await ctx.isOldestPendingForAmount(order))) continue;
       return paid(utr, String(mail.messageId || '').slice(0, 120) || null, { source: 'fampay_email', sender: from, subject: mail.subject, matched_by: byOrder ? 'order_no' : byUtr ? 'customer_utr' : 'amount_window' });
     }
-    return pending();
+    return pending({ info: `emails from ${sender}: ${msgs.length}`, skipped: skips.slice(0, 5) });
   },
 };
 
