@@ -9,7 +9,7 @@ import { PROVIDERS, verifiers, hosted } from './verifiers.js';
 export const CFG = {
   orderExpiryMinutes: 15, checkIntervalSeconds: 3, maxUtrAttempts: 3, utrGraceMinutes: 60,
   uniqueAmount: { providers: ['fam_email', 'fampay_email'], maxOffsetPaise: 50, graceMinutes: 60 },
-  fam: { sender: 'no-reply@famapp.in', domain: 'famapp.in', maxAgeHours: 72, lateGraceMinutes: 60, skewMinutes: 2, sigToleranceSeconds: 300 },
+  fam: { sender: 'no-reply@famapp.com', domain: 'famapp.com', maxAgeHours: 72, lateGraceMinutes: 60, skewMinutes: 2, sigToleranceSeconds: 300 },
   failureLimit: 5, cooldownMinutes: 10, backoff: [30, 120, 600, 1800, 3600],
 };
 

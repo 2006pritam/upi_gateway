@@ -99,7 +99,7 @@ export const verifiers = {
     if (!c.imap_username || !c.imap_password) return pending({ error: 'FamPay IMAP credentials not configured' });
     const host = (c.imap_host || 'imap.gmail.com').toLowerCase();
     if (!IMAP_HOSTS.includes(host) || Number(c.imap_port || 993) !== 993) return pending({ error: 'IMAP host not allowed' });
-    const sender = String(c.imap_sender || 'no-reply@famapp.in').toLowerCase().trim();
+    const sender = String(c.imap_sender || 'no-reply@famapp.com').toLowerCase().trim();
     const since = new Date(new Date(order.createdAt).getTime() - 86400000);
     const client = new ImapFlow({ host, port: 993, secure: true, auth: { user: c.imap_username, pass: c.imap_password }, logger: false, socketTimeout: 12000 });
     const msgs = []; const diag = {};

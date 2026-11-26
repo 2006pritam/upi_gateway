@@ -193,7 +193,7 @@ export const handlers = {
     if (provider === 'fampay_email') {
       const host = str(b.imap_host, 80, 'imap_host') || 'imap.gmail.com';
       if (!IMAP_HOSTS.includes(host)) fail('imap_host', 'That mail server is not supported.');
-      credentials = { imap_username: need('imap_username', 'Gmail / IMAP email address'), imap_password: need('imap_password', 'Google App Password').replace(/\s+/g, ''), imap_host: host, imap_port: '993', imap_sender: str(b.imap_sender, 150, 'imap_sender') || 'no-reply@famapp.in' };
+      credentials = { imap_username: need('imap_username', 'Gmail / IMAP email address'), imap_password: need('imap_password', 'Google App Password').replace(/\s+/g, ''), imap_host: host, imap_port: '993', imap_sender: str(b.imap_sender, 150, 'imap_sender') || 'no-reply@famapp.com' };
     }
     if (provider === 'fam_email') credentials = { ingest_secret: randomToken(48) };
     const first = (await db.count('accounts', [Query.equal('userId', u.id)])) === 0;
