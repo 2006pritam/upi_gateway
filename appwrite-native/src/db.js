@@ -1,7 +1,8 @@
 import { Client, TablesDB, Users, Query, ID, AppwriteException } from 'node-appwrite';
 import crypto from 'node:crypto';
 
-export const DB = 'emudra';
+export const DB = process.env.EM_DATABASE_ID || 'upi_gateway_db';
+const T = (t) => 'em_' + t;
 export { Query, ID };
 
 let _tables = null;
@@ -50,24 +51,24 @@ function decode(row) {
 }
 
 export async function get(table, id) {
-  try { return decode(await _tables.getRow({ databaseId: DB, tableId: table, rowId: id })); }
+  try { return decode(await _tables.getRow({ databaseId: DB, tableId: T(table), rowId: id })); }
   catch (e) { if (isNotFound(e)) return null; throw e; }
 }
 
 export async function create(table, data, id = ID.unique()) {
-  return decode(await _tables.createRow({ databaseId: DB, tableId: table, rowId: id, data: encode(data) }));
+  return decode(await _tables.createRow({ databaseId: DB, tableId: T(table), rowId: id, data: encode(data) }));
 }
 
 export async function update(table, id, data) {
-  return decode(await _tables.updateRow({ databaseId: DB, tableId: table, rowId: id, data: encode(data) }));
+  return decode(await _tables.updateRow({ databaseId: DB, tableId: T(table), rowId: id, data: encode(data) }));
 }
 
 export async function remove(table, id) {
-  try { await _tables.deleteRow({ databaseId: DB, tableId: table, rowId: id }); } catch (e) { if (!isNotFound(e)) throw e; }
+  try { await _tables.deleteRow({ databaseId: DB, tableId: T(table), rowId: id }); } catch (e) { if (!isNotFound(e)) throw e; }
 }
 
 export async function list(table, queries = [], limit = 100) {
-  const res = await _tables.listRows({ databaseId: DB, tableId: table, queries: [...queries, Query.limit(limit)] });
+  const res = await _tables.listRows({ databaseId: DB, tableId: T(table), queries: [...queries, Query.limit(limit)] });
   return { rows: res.rows.map(decode), total: res.total };
 }
 
@@ -83,7 +84,7 @@ export async function all(table, queries = [], max = 5000) {
   while (out.length < max) {
     const q = [...queries, Query.limit(100)];
     if (cursor) q.push(Query.cursorAfter(cursor));
-    const res = await _tables.listRows({ databaseId: DB, tableId: table, queries: q });
+    const res = await _tables.listRows({ databaseId: DB, tableId: T(table), queries: q });
     out.push(...res.rows.map(decode));
     if (res.rows.length < 100) break;
     cursor = res.rows[res.rows.length - 1].$id;
@@ -92,7 +93,7 @@ export async function all(table, queries = [], max = 5000) {
 }
 
 export async function count(table, queries = []) {
-  const res = await _tables.listRows({ databaseId: DB, tableId: table, queries: [...queries, Query.limit(1)] });
+  const res = await _tables.listRows({ databaseId: DB, tableId: T(table), queries: [...queries, Query.limit(1)] });
   return res.total;
 }
 
@@ -105,7 +106,7 @@ export const claimId = (kind, ref) => crypto.createHash('sha1').update(`${kind}:
 export async function claim(kind, ref, expiresAt = null, owner = null) {
   const id = claimId(kind, ref);
   try {
-    await _tables.createRow({ databaseId: DB, tableId: 'claims', rowId: id, data: { kind, ref: String(ref).slice(0, 120), expiresAt, owner } });
+    await _tables.createRow({ databaseId: DB, tableId: 'em_claims', rowId: id, data: { kind, ref: String(ref).slice(0, 120), expiresAt, owner } });
     return { won: true, id };
   } catch (e) {
     if (isConflict(e)) return { won: false, id };
