@@ -1,0 +1,31 @@
+:root{--bg:#f5f6fb;--card:#fff;--ink:#14162b;--muted:#6b7090;--line:#e6e8f2;--brand:#5b3df5;--brand2:#7c5cff;--ok:#12a150;--warn:#d98a00;--bad:#d93a3a;--r:14px}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1020;--card:#171a30;--ink:#eceefb;--muted:#9aa0c4;--line:#262a48}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+a{color:var(--brand);text-decoration:none}h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:0 0 10px}h3{font-size:15px;margin:0 0 8px}
+.muted{color:var(--muted)}.small{font-size:12.5px}.center{text-align:center}code{background:var(--bg);padding:2px 6px;border-radius:6px;word-break:break-all;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px}
+.btn{display:inline-block;border:0;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;padding:9px 16px;border-radius:10px;font:600 14px inherit;cursor:pointer}
+.btn:hover{filter:brightness(1.07)}.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}.btn-danger{background:var(--bad)}.btn-sm{padding:5px 10px;font-size:12.5px}.btn-lg{padding:14px 20px;font-size:16px}.btn-block{display:block;width:100%;text-align:center}
+.input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit}.label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.alert{padding:10px 12px;border-radius:10px;margin:10px 0;font-size:14px}.alert-error{background:#fde8e8;color:#9b1c1c}.alert-ok{background:#e3f6ea;color:#0e6b35}.notice{background:#fff6dd;color:#7a5200;padding:10px 12px;border-radius:10px;margin:10px 0;font-size:14px}
+.field-err{color:var(--bad);font-size:12.5px;margin-top:3px}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:var(--line)}.pill-paid,.pill-active,.pill-live{background:#dff5e7;color:#0e6b35}.pill-pending,.pill-review,.pill-paused{background:#fff1cf;color:#8a5a00}.pill-expired,.pill-failed,.pill-cancelled,.pill-revoked{background:#fde1e1;color:#9b1c1c}.pill-sandbox{background:#e4defe;color:#4b2fd0}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}.tablewrap{overflow-x:auto}
+.stat{font-size:24px;font-weight:700}.stat-l{color:var(--muted);font-size:13px}
+/* app shell */
+.shell{display:flex;min-height:100vh}.side{width:220px;background:var(--card);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto;flex:none}
+.brand{display:flex;gap:8px;align-items:center;font-weight:800;font-size:18px;margin:0 6px 16px}.brand img{width:28px;height:28px}
+.side a.nav{display:block;padding:8px 10px;border-radius:9px;color:var(--ink);margin-bottom:2px}.side a.nav.on,.side a.nav:hover{background:var(--bg);color:var(--brand)}
+.main{flex:1;min-width:0;padding:22px;max-width:1100px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:10px;flex-wrap:wrap}
+.menu-btn{display:none}.env{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.env button{border:0;background:transparent;padding:6px 12px;color:var(--ink);cursor:pointer;font:inherit}.env button.on{background:var(--brand);color:#fff}
+@media(max-width:800px){.side{position:fixed;left:-240px;z-index:20;transition:left .2s}.side.open{left:0}.menu-btn{display:inline-block}.main{padding:14px}}
+.auth{max-width:420px;margin:7vh auto;padding:0 16px}.bars{display:flex;gap:6px;align-items:flex-end;height:120px}.bars div{flex:1;background:linear-gradient(var(--brand2),var(--brand));border-radius:6px 6px 0 0;min-height:3px;position:relative}.bars span{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted)}
+pre{background:#0f1226;color:#dfe3ff;padding:12px;border-radius:10px;overflow:auto;font-size:12.5px}.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}.tabs button{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:99px;padding:5px 12px;cursor:pointer;font:inherit}.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}.modal .card{max-width:520px;width:100%;max-height:90vh;overflow:auto;margin:0}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#14162b;color:#fff;padding:10px 16px;border-radius:10px;z-index:99}
+/* checkout */
+.pay-body{background:linear-gradient(160deg,#ece8ff,#f6f7fc)}.pay-wrap{max-width:430px;margin:0 auto;padding:18px 14px 40px}.pay-card{text-align:center}.pay-head{margin-bottom:12px}.pay-merchant{font-weight:700;font-size:17px}.pay-amount{font-size:38px;font-weight:800;margin:4px 0;color:var(--brand)}.pay-foot{text-align:center;color:var(--muted);font-size:12px;margin-top:14px}
+.qr{width:240px;max-width:100%;border:1px solid var(--line);border-radius:12px;padding:6px;background:#fff;margin:8px auto;display:block}.apps{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.app-btn{text-align:center}.upi-id{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin:8px 0}
+.big-ok{width:70px;height:70px;border-radius:50%;background:var(--ok);color:#fff;font-size:40px;line-height:70px;margin:8px auto}.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px}@keyframes sp{to{transform:rotate(360deg)}}
+.status-line{margin:12px 0;font-size:14px}.pay-body .card{color:var(--ink)}.pay-body{color:#14162b}
