@@ -102,12 +102,19 @@ export const verifiers = {
     const sender = String(c.imap_sender || 'no-reply@famapp.in').toLowerCase().trim();
     const since = new Date(new Date(order.createdAt).getTime() - 86400000);
     const client = new ImapFlow({ host, port: 993, secure: true, auth: { user: c.imap_username, pass: c.imap_password }, logger: false, socketTimeout: 12000 });
-    const msgs = [];
+    const msgs = []; const diag = {};
     try {
       await client.connect();
       const lock = await client.getMailboxLock('INBOX');
       try {
         const uids = (await client.search({ from: sender, since })) || [];
+        if (!uids.length) {
+          // diagnostics: which senders did the inbox receive recently?
+          const any = ((await client.search({ since })) || []).slice(-12);
+          const seen = new Set();
+          for (const uid of any) { const m = await client.fetchOne(uid, { envelope: true }, { uid: true }); const a = m?.envelope?.from?.[0]?.address; if (a) seen.add(a.toLowerCase()); }
+          diag.senders = [...seen]; diag.inboxRecent = any.length;
+        }
         for (const uid of uids.slice(-15)) {
           const m = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
           if (m?.source) msgs.push(m.source);
@@ -140,7 +147,7 @@ export const verifiers = {
       if (!byOrder && !byUtr && !(await ctx.isOldestPendingForAmount(order))) continue;
       return paid(utr, String(mail.messageId || '').slice(0, 120) || null, { source: 'fampay_email', sender: from, subject: mail.subject, matched_by: byOrder ? 'order_no' : byUtr ? 'customer_utr' : 'amount_window' });
     }
-    return pending({ info: `emails from ${sender}: ${msgs.length}`, skipped: skips.slice(0, 5) });
+    return pending({ info: `emails from ${sender}: ${msgs.length}`, skipped: skips.slice(0, 5), ...diag });
   },
 };
 
