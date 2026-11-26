@@ -70,6 +70,12 @@ export async function login(body) {
   let session;
   try { session = await new Account(newClient()).createEmailPasswordSession({ email, password: String(body.password || '') }); }
   catch (e) { if (e.code === 401 || e.code === 400) fail('email', 'These credentials do not match our records.'); if (e.code === 429) throw new ValidationError('Too many attempts. Try again later.', 429); throw e; }
+  // Server-side email/password sessions come back without a secret; once the password is verified, mint a session with the admin API instead.
+  if (!session.secret) {
+    const verified = session;
+    session = await db.users().createSession({ userId: verified.userId });
+    await db.users().deleteSession({ userId: verified.userId, sessionId: verified.$id }).catch(() => {});
+  }
   const profile = await core.getProfile(session.userId);
   if (profile && profile.isActive === false) { await new Account(newClient().setSession(session.secret)).deleteSession({ sessionId: 'current' }).catch(() => {}); fail('email', 'This account has been disabled.'); }
   return { secret: session.secret, expire: session.expire };
