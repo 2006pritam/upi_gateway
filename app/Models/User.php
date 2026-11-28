@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SubscriptionPlans;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,6 +21,7 @@ class User extends Authenticatable
         'role' => 'merchant',
         'is_active' => true,
         'rotation_mode' => 'random',
+        'subscription_status' => self::SUBSCRIPTION_PENDING,
     ];
 
     protected $fillable = [
@@ -30,6 +32,13 @@ class User extends Authenticatable
         'business_name',
         'phone',
         'is_active',
+        'subscription_status',
+        'subscription_requested_plan',
+        'subscription_plan',
+        'subscription_approved_at',
+        'subscription_paid_at',
+        'subscription_started_at',
+        'subscription_expires_at',
         'webhook_url',
         'sandbox_webhook_url',
         'rotation_mode',
@@ -38,6 +47,16 @@ class User extends Authenticatable
 
     /** Extra endpoints allowed per environment (the primary URL is not counted). */
     public const MAX_EXTRA_WEBHOOKS = 4;
+
+    public const SUBSCRIPTION_PENDING = 'pending_approval';
+
+    public const SUBSCRIPTION_PAYMENT_DUE = 'payment_due';
+
+    public const SUBSCRIPTION_ACTIVE = 'active';
+
+    public const SUBSCRIPTION_EXPIRED = 'expired';
+
+    public const SUBSCRIPTION_REJECTED = 'rejected';
 
     public const ROTATION_MODES = [
         'random' => 'Random rotation',
@@ -57,6 +76,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'subscription_approved_at' => 'datetime',
+            'subscription_paid_at' => 'datetime',
+            'subscription_started_at' => 'datetime',
+            'subscription_expires_at' => 'datetime',
             'api_secret' => 'encrypted',
             'sandbox_api_secret' => 'encrypted',
             'redirect_domains' => 'array',
@@ -101,6 +124,24 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function subscriptionHasExpired(): bool
+    {
+        return $this->subscription_status === self::SUBSCRIPTION_ACTIVE
+            && $this->subscription_expires_at !== null
+            && $this->subscription_expires_at->lessThanOrEqualTo(now());
+    }
+
+    public function hasSubscriptionAccess(): bool
+    {
+        return $this->subscription_status === self::SUBSCRIPTION_ACTIVE
+            && ($this->subscription_expires_at === null || $this->subscription_expires_at->isFuture());
+    }
+
+    public function subscriptionPlanLabel(): string
+    {
+        return SubscriptionPlans::label($this->subscription_requested_plan ?: $this->subscription_plan);
     }
 
     public function displayName(): string

@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\SubscriptionPlans;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
@@ -89,16 +91,24 @@ class AuthController extends Controller
             'business_name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:users'],
             'phone' => ['nullable', 'string', 'max:20'],
+            'plan' => ['required', 'string', Rule::in(array_keys(SubscriptionPlans::PLANS))],
             'password' => ['required', 'confirmed', $this->passwordRule()],
         ]);
 
-        $user = User::create($data + ['role' => 'merchant']);
-        $user->regenerateApiCredentials();
+        $plan = $data['plan'];
+        unset($data['plan']);
+
+        $user = User::create($data + [
+            'role' => 'merchant',
+            'is_active' => true,
+            'subscription_status' => User::SUBSCRIPTION_PENDING,
+            'subscription_requested_plan' => $plan,
+        ]);
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('accounts.create')
-            ->with('status', 'Welcome! Add your first UPI account to start accepting payments.');
+        return redirect()->route('subscription.show')
+            ->with('status', 'Your account request is waiting for admin approval. Access will begin only after payment is confirmed by the admin.');
     }
 
     // ── Logout ────────────────────────────────────────────────────────────────

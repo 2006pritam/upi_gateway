@@ -22,6 +22,7 @@ class MultipleWebhookEndpointsTest extends TestCase
             'name' => 'Multi Merchant',
             'business_name' => 'Multi Shop',
             'email' => $email,
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
             'password' => 'password12345',
         ]);
         $merchant->regenerateApiCredentials();

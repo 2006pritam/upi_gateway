@@ -16,7 +16,7 @@
 
     <div>
         <label class="label">Email Address</label>
-        <input type="email" name="email" value="{{ old('email') }}" @class(['input', 'ring-red-400 focus:ring-red-500' => $errors->has('email')]) placeholder="admin@example.com" required autocomplete="email">
+        <input type="email" name="email" value="{{ old('email', config('billing.admin_contact_email')) }}" @class(['input', 'ring-red-400 focus:ring-red-500' => $errors->has('email')]) placeholder="admin@example.com" required autocomplete="email">
         @error('email')<p class="mt-1.5 flex items-start gap-1.5 text-xs text-red-600"><x-icon name="alert" class="mt-px w-3.5 h-3.5" /> <span>{{ $message }}</span></p>@enderror
     </div>
 

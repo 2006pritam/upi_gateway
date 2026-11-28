@@ -47,7 +47,7 @@ class WebhookSsrfTest extends TestCase
     {
         $user = User::create([
             'name' => 'Ravi', 'business_name' => 'Ravi Store',
-            'email' => 'ravi@example.com', 'password' => 'password123',
+            'email' => 'ravi@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
         $user->regenerateApiCredentials();
         $user->paymentAccounts()->create([

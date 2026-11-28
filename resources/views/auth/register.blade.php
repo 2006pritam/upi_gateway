@@ -1,6 +1,6 @@
 @extends('layouts.guest')
 @section('title', 'Create your account')
-@section('subtitle', 'Start accepting UPI payments in minutes. Free, no setup fee.')
+@section('subtitle', 'Request a merchant account. Access starts after admin approval and payment confirmation.')
 
 @section('content')
 <form method="POST" action="{{ route('register') }}">
@@ -11,12 +11,18 @@
     </div>
     <x-input name="email" label="Work email" type="email" required autocomplete="email" placeholder="you@business.com" />
     <x-input name="phone" label="Mobile number" placeholder="Optional" autocomplete="tel" />
+    <label for="f-plan" class="label">Subscription plan</label>
+    <select id="f-plan" name="plan" required class="input py-2.5 mb-5">
+        @foreach (\App\Support\SubscriptionPlans::PLANS as $key => $plan)
+            <option value="{{ $key }}" @selected(old('plan', 'monthly') === $key)>{{ $plan['label'] }} — ₹{{ number_format($plan['amount']) }}</option>
+        @endforeach
+    </select>
     <div class="grid sm:grid-cols-2 gap-x-3">
-        <x-input name="password" label="Password" type="password" required autocomplete="new-password" placeholder="Min 8 chars" />
+        <x-input name="password" label="Password" type="password" required autocomplete="new-password" placeholder="Min 10 chars" />
         <x-input name="password_confirmation" label="Confirm" type="password" required autocomplete="new-password" />
     </div>
-    <button class="btn btn-primary w-full py-2.5 mt-1">Create account <x-icon name="arrow-right" class="w-4 h-4" /></button>
-    <p class="text-xs text-center text-slate-400 mt-4">Payments go directly to your UPI account. We never hold your funds.</p>
+    <button class="btn btn-primary w-full py-2.5 mt-1">Request account <x-icon name="arrow-right" class="w-4 h-4" /></button>
+    <p class="text-xs text-center text-slate-400 mt-4">No payment is collected here. Contact the admin after review; your subscription begins when payment is confirmed.</p>
 </form>
 <p class="text-sm text-center text-slate-500 mt-8">Already have an account? <a href="{{ route('login') }}" class="font-semibold text-brand-600 hover:text-brand-700">Log in</a></p>
 @endsection

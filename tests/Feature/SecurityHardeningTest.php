@@ -30,6 +30,7 @@ class SecurityHardeningTest extends TestCase
             'name' => 'Ravi',
             'business_name' => 'Ravi Store',
             'email' => 'ravi@example.com',
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
             'password' => 'password12345', // meets new min-10 policy
         ], $extra));
         $user->regenerateApiCredentials();
@@ -151,11 +152,15 @@ class SecurityHardeningTest extends TestCase
             'name' => 'Test',
             'business_name' => 'Test Co',
             'email' => 'newuser@example.com',
+            'plan' => 'monthly',
             'password' => 'password12',
             'password_confirmation' => 'password12',
-        ])->assertSessionHasNoErrors();
+        ])->assertSessionHasNoErrors()->assertRedirect(route('subscription.show'));
 
-        $this->assertDatabaseHas('users', ['email' => 'newuser@example.com']);
+        $this->assertDatabaseHas('users', [
+            'email' => 'newuser@example.com',
+            'subscription_status' => User::SUBSCRIPTION_PENDING,
+        ]);
     }
 
     // ── 4. redirect_url allowlist ─────────────────────────────────────────────
@@ -351,7 +356,7 @@ class SecurityHardeningTest extends TestCase
         $merchant1 = $this->merchant();
         $merchant2 = User::create([
             'name' => 'Other', 'business_name' => 'Other Co',
-            'email' => 'other@example.com', 'password' => 'password12345',
+            'email' => 'other@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password12345',
         ]);
         $merchant2->regenerateApiCredentials();
         $merchant2->paymentAccounts()->create([

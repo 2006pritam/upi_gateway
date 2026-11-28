@@ -53,6 +53,7 @@ Each merchant can configure their own UPI accounts, generate dynamic payment QR 
 - Manual UTR verification and review flow
 - Merchant API authentication
 - Centralized administration dashboard
+- Admin-reviewed merchant account requests and manual subscription billing
 - Browser-based installation wizard for cPanel and VPS deployments
 
 ---
@@ -151,6 +152,20 @@ Each merchant can configure their own UPI accounts, generate dynamic payment QR 
 - Admin dashboard.
 - Payment verification history.
 - Installation lock after successful setup.
+
+### 💳 Merchant account approval & subscriptions
+
+New merchant signups submit an account request and select a subscription plan. The administrator reviews the request from **Admin → Account requests & billing**. Approval does not collect money or begin the subscription clock: the merchant contacts the administrator to arrange payment, and the administrator confirms receipt in the dashboard to activate the selected plan.
+
+| Plan | Fee |
+|---|---:|
+| 1 month | ₹199 |
+| 6 months | ₹599 |
+| 12 months | ₹2,100 |
+
+Payments are manual and handled directly with the administrator; this feature does not add a payment processor or automatically charge a card/UPI account. The subscription starts when the administrator confirms payment. When the term ends, the next merchant web request is redirected to the billing screen, and merchant API keys receive HTTP 403 until the administrator confirms renewal. Configure the displayed contact address with `SUBSCRIPTION_CONTACT_EMAIL` (defaults to `modakpritam06@gmail.com`).
+
+The subscription migration defaults existing merchant records to approval-required. After backing up the production database and deploying the release, review and approve existing merchants and confirm any payments before restoring their access. Create the administrator through the installer with a strong, unique password; no `admin/admin` login is seeded.
 
 ---
 

@@ -39,6 +39,7 @@ class TransactionIntegrityTest extends TestCase
             'name' => 'Ravi',
             'business_name' => 'Ravi Store',
             'email' => 'ravi@example.com',
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
             'password' => 'password123',
         ]);
         $user->regenerateApiCredentials();
@@ -59,6 +60,7 @@ class TransactionIntegrityTest extends TestCase
         $user = User::create([
             'name' => 'Manual',
             'email' => 'manual@example.com',
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
             'password' => 'password123',
         ]);
         $user->paymentAccounts()->create([
@@ -257,7 +259,7 @@ class TransactionIntegrityTest extends TestCase
     public function test_paytm_pg_rejects_response_with_wrong_order_id(): void
     {
         Queue::fake();
-        $merchant = User::create(['name' => 'PG', 'email' => 'pg@example.com', 'password' => 'password123']);
+        $merchant = User::create(['name' => 'PG', 'email' => 'pg@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
         $merchant->regenerateApiCredentials();
         $merchant->paymentAccounts()->create([
             'provider' => 'paytm_pg',
@@ -293,7 +295,7 @@ class TransactionIntegrityTest extends TestCase
     public function test_phonepe_rejects_response_with_wrong_order_id(): void
     {
         Queue::fake();
-        $merchant = User::create(['name' => 'PP', 'email' => 'pp@example.com', 'password' => 'password123']);
+        $merchant = User::create(['name' => 'PP', 'email' => 'pp@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
         $merchant->regenerateApiCredentials();
         $merchant->paymentAccounts()->create([
             'provider' => 'phonepe_pg',
@@ -374,7 +376,7 @@ class TransactionIntegrityTest extends TestCase
         $this->post(route('pay.utr', $order), ['utr' => '412345678901']);
         $this->assertSame(Order::REVIEW, $order->fresh()->status);
 
-        $merchantB = User::create(['name' => 'B', 'email' => 'b@example.com', 'password' => 'password123']);
+        $merchantB = User::create(['name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
 
         $this->actingAs($merchantB)
             ->post(route('orders.approve-utr', $order), ['bank_utr' => '412345678901'])
