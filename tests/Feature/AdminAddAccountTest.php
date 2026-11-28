@@ -38,6 +38,7 @@ class AdminAddAccountTest extends TestCase
         $this->get(route('admin.merchants'))->assertOk()->assertSee('Never expires');
 
         $this->travel(20)->years();
+        $this->flushSession(); // switching users in one test session would otherwise trip AuthenticateSession
         $this->actingAs($merchant)->get(route('dashboard'))->assertOk();
         $this->get(route('subscription.show'))->assertOk()->assertSee('Lifetime')->assertSee('Never')->assertDontSee('Manual payment with the admin');
         $this->getJson('/api/v1/accounts', ['X-Api-Key' => $merchant->api_key, 'X-Api-Secret' => $merchant->api_secret])->assertOk();
