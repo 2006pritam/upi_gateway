@@ -12,11 +12,12 @@
     <x-input name="email" label="Work email" type="email" required autocomplete="email" placeholder="you@business.com" />
     <x-input name="phone" label="Mobile number" placeholder="Optional" autocomplete="tel" />
     <label for="f-plan" class="label">Subscription plan</label>
-    <select id="f-plan" name="plan" required class="input py-2.5 mb-5">
+    <select id="f-plan" name="plan" required class="input py-2.5">
         @foreach (\App\Support\SubscriptionPlans::PLANS as $key => $plan)
             <option value="{{ $key }}" @selected(old('plan', 'monthly') === $key)>{{ $plan['label'] }} — ₹{{ number_format($plan['amount']) }}</option>
         @endforeach
     </select>
+    <p class="mt-1.5 mb-5 text-xs text-slate-500">The 2 day trial is available once, for new accounts.</p>
     <div class="grid sm:grid-cols-2 gap-x-3">
         <x-input name="password" label="Password" type="password" required autocomplete="new-password" placeholder="Min 10 chars" />
         <x-input name="password_confirmation" label="Confirm" type="password" required autocomplete="new-password" />

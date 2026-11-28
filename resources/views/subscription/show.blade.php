@@ -89,7 +89,7 @@
                         </div>
                         <div class="rounded-xl bg-slate-50 p-4">
                             <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Ends</div>
-                            <div class="mt-1 font-semibold text-slate-900">{{ auth()->user()->subscription_expires_at?->format('d M Y') ?? (auth()->user()->subscription_plan === \App\Support\SubscriptionPlans::LIFETIME ? 'Never' : 'No expiry recorded') }}</div>
+                            <div class="mt-1 font-semibold text-slate-900">{{ auth()->user()->subscription_expires_at?->format('d M Y, h:i A') ?? (auth()->user()->subscription_plan === \App\Support\SubscriptionPlans::LIFETIME ? 'Never' : 'No expiry recorded') }}</div>
                         </div>
                     @endif
                 </div>

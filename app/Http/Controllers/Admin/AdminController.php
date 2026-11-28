@@ -98,7 +98,7 @@ class AdminController extends Controller
         abort_unless($user->subscription_status === User::SUBSCRIPTION_PENDING, 409, 'This account request is no longer awaiting review.');
 
         $data = $request->validate([
-            'plan' => ['required', 'string', Rule::in(array_keys(SubscriptionPlans::PLANS))],
+            'plan' => ['required', 'string', Rule::in(array_keys(SubscriptionPlans::availableTo($user)))],
         ]);
 
         DB::transaction(function () use ($request, $user, $data) {
@@ -144,7 +144,7 @@ class AdminController extends Controller
             $merchant = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             abort_unless(
                 $merchant->subscription_status === User::SUBSCRIPTION_PAYMENT_DUE
-                    && SubscriptionPlans::valid((string) $merchant->subscription_requested_plan),
+                    && array_key_exists((string) $merchant->subscription_requested_plan, SubscriptionPlans::availableTo($merchant)),
                 409,
                 'This merchant has no approved plan awaiting payment confirmation.'
             );

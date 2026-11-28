@@ -278,14 +278,14 @@
             <div class="text-sm font-semibold text-brand-600">Pricing</div>
             <h2 class="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">Simple and transparent</h2>
             <p class="mt-4 text-lg text-slate-600">No per-transaction cut. Choose a plan, send your request, and start once it is approved.</p>
-            <div class="mt-12 grid sm:grid-cols-3 gap-6 items-stretch">
-                @foreach (\App\Support\SubscriptionPlans::PLANS as $plan)
+            <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                @foreach (\App\Support\SubscriptionPlans::PLANS as $key => $plan)
                     <div class="card p-8 text-left flex flex-col">
                         <div class="font-semibold text-slate-900 text-lg">{{ $plan['label'] }}</div>
                         <div class="mt-6 flex items-baseline gap-1">
                             <span class="text-5xl font-extrabold tracking-tight text-slate-900">₹{{ number_format($plan['amount']) }}</span>
                         </div>
-                        <div class="mt-1 text-sm text-slate-500">0% transaction fee</div>
+                        <div class="mt-1 text-sm text-slate-500">{{ $key === \App\Support\SubscriptionPlans::TRIAL ? 'Once per new account' : '0% transaction fee' }}</div>
                         <ul class="mt-8 space-y-3 text-sm text-slate-700 flex-1">
                             @foreach (['Payment links & API orders', 'Signed webhooks with retries', 'Dashboard & reports'] as $f)
                                 <li class="flex items-center gap-3"><x-icon name="check" class="w-5 h-5 text-emerald-500 shrink-0" /> {{ $f }}</li>
@@ -295,7 +295,7 @@
                     </div>
                 @endforeach
             </div>
-            <p class="mt-8 text-sm text-slate-500">Payment is arranged directly with the admin. Your plan starts after approval and payment confirmation.</p>
+            <p class="mt-8 text-sm text-slate-500">After approval, you pay for your plan by UPI. It starts once the payment is verified.</p>
         </div>
     </section>
 
@@ -336,7 +336,7 @@
             <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.03\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-40"></div>
             <div class="relative">
                 <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80 ring-1 ring-white/20 mb-6">
-                    <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span> Plans from ₹{{ number_format(\App\Support\SubscriptionPlans::PLANS['monthly']['amount']) }} · Approval required
+                    <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span> ₹{{ number_format(\App\Support\SubscriptionPlans::PLANS['trial']['amount']) }} trial for 2 days · Plans from ₹{{ number_format(\App\Support\SubscriptionPlans::PLANS['monthly']['amount']) }} · Approval required
                 </span>
                 <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">Start accepting UPI payments today</h2>
                 <p class="mt-4 text-lg text-slate-300 max-w-xl mx-auto">Request your account, get approved, and start collecting. Money goes directly to your bank account.</p>

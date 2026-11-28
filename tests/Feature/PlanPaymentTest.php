@@ -340,6 +340,63 @@ class PlanPaymentTest extends TestCase
         $this->assertDatabaseHas('admin_audit_logs', ['action' => 'subscription_payment_needs_review']);
     }
 
+    public function test_trial_costs_one_rupee_and_lasts_exactly_two_days(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $merchant = $this->due('trial');
+
+        $this->actingAs($merchant)->get(route('subscription.show'))->assertSee('2 day trial')->assertSee('Pay ₹1 now');
+        $order = $this->startPayment($merchant);
+        $this->assertEquals(1, $order->amount);
+        $this->markPaid($order);
+
+        $this->assertTrue($merchant->refresh()->subscription_expires_at->equalTo(now()->addDays(2)));
+
+        $this->travelTo($merchant->subscription_expires_at->copy()->subSecond());
+        $this->flushSession();
+        $this->actingAs($merchant)->get(route('dashboard'))->assertOk();
+        $this->travel(1)->seconds();
+        $this->get(route('dashboard'))->assertRedirect(route('subscription.show'));
+
+        // After the trial the monthly plan is offered, and the trial is gone.
+        $this->get(route('subscription.show'))->assertSee('Pay ₹199 now')->assertDontSee('2 day trial');
+    }
+
+    public function test_trial_cannot_be_bought_again_by_any_route(): void
+    {
+        $merchant = $this->expired('monthly');
+
+        $this->actingAs($merchant)->post(route('subscription.pay'), ['plan' => 'trial'])->assertSessionHasErrors('plan');
+        $this->post(route('subscription.request'), ['plan' => 'trial'])->assertSessionHasErrors('plan');
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertSame('monthly', $merchant->refresh()->subscription_requested_plan);
+
+        // Even a payment-due record that somehow asks for it is refused.
+        $merchant->forceFill(['subscription_status' => User::SUBSCRIPTION_PAYMENT_DUE, 'subscription_requested_plan' => 'trial'])->save();
+        $this->post(route('subscription.pay'))->assertSessionHasErrors('plan');
+        $this->withoutMiddleware(RequirePassword::class);
+        $this->flushSession();
+        $this->actingAs($this->admin)->post(route('admin.merchants.activate', $merchant))->assertStatus(409);
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_new_signup_can_choose_the_trial_and_admin_can_approve_it(): void
+    {
+        $this->get(route('home'))->assertOk()->assertSee('2 day trial');
+        $this->get(route('register'))->assertSee('2 day trial');
+        $this->post(route('register'), [
+            'name' => 'Tri', 'business_name' => 'Trial Shop', 'email' => 'trial@example.test', 'plan' => 'trial',
+            'password' => 'StrongPass123!', 'password_confirmation' => 'StrongPass123!',
+        ])->assertSessionHasNoErrors();
+        $merchant = User::where('email', 'trial@example.test')->sole();
+
+        $this->withoutMiddleware(RequirePassword::class);
+        $this->flushSession();
+        $this->actingAs($this->admin)->post(route('admin.merchants.approve', $merchant), ['plan' => 'trial'])->assertSessionHasNoErrors();
+
+        $this->assertEquals(1, $this->startPayment($merchant->refresh())->amount);
+    }
+
     public function test_without_an_admin_upi_account_the_manual_route_is_shown(): void
     {
         $this->account->update(['is_active' => false]);

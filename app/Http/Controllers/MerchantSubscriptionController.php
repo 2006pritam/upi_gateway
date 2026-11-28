@@ -30,7 +30,7 @@ class MerchantSubscriptionController extends Controller
         $payable = $renewing || $user->subscription_status === User::SUBSCRIPTION_PAYMENT_DUE;
 
         return view('subscription.show', [
-            'plans' => SubscriptionPlans::PLANS,
+            'plans' => SubscriptionPlans::availableTo($user),
             'receiver' => $billing->receiver(),
             'openPayment' => $payable ? $billing->openPayment($user) : null,
             'renewing' => $renewing,
@@ -47,8 +47,8 @@ class MerchantSubscriptionController extends Controller
         abort_if($user->isAdmin(), 404);
 
         $data = $request->validate([
-            'plan' => ['nullable', 'string', Rule::in(array_keys(SubscriptionPlans::PLANS))],
-        ]);
+            'plan' => ['nullable', 'string', Rule::in(array_keys(SubscriptionPlans::availableTo($user)))],
+        ], ['plan.in' => 'That plan is not available for this account. The trial is only for new accounts.']);
 
         // An earlier checkout that ran out of time gets one last check before a new one is made.
         $stale = PlanPayment::where('user_id', $user->id)->whereNull('applied_at')
@@ -74,13 +74,13 @@ class MerchantSubscriptionController extends Controller
 
     public function requestPlan(Request $request, PlanBilling $billing)
     {
-        $data = $request->validate([
-            'plan' => ['required', 'string', Rule::in(array_keys(SubscriptionPlans::PLANS))],
-        ]);
-
         /** @var User $user */
         $user = $request->user();
         abort_if($user->isAdmin(), 404);
+
+        $data = $request->validate([
+            'plan' => ['required', 'string', Rule::in(array_keys(SubscriptionPlans::availableTo($user)))],
+        ], ['plan.in' => 'That plan is not available for this account. The trial is only for new accounts.']);
 
         if ($user->subscription_status === User::SUBSCRIPTION_PENDING) {
             return back()->withErrors(['plan' => 'Your account request is already waiting for admin review.']);

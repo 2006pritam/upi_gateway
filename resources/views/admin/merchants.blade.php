@@ -124,7 +124,7 @@
                                     @csrf
                                     <label class="sr-only" for="plan-{{ $merchant->id }}">Plan for {{ $merchant->displayName() }}</label>
                                     <select id="plan-{{ $merchant->id }}" name="plan" class="input py-2 text-xs" required>
-                                        @foreach ($plans as $key => $plan)
+                                        @foreach (\App\Support\SubscriptionPlans::availableTo($merchant) as $key => $plan)
                                             <option value="{{ $key }}" @selected(($planKey ?: 'monthly') === $key)>{{ $plan['label'] }} — ₹{{ number_format($plan['amount']) }}</option>
                                         @endforeach
                                     </select>

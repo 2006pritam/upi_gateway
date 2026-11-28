@@ -40,7 +40,7 @@ class PlanBilling
     public function renewalPlan(User $merchant): string
     {
         foreach ([$merchant->subscription_plan, $merchant->subscription_requested_plan] as $plan) {
-            if (SubscriptionPlans::valid((string) $plan)) {
+            if (array_key_exists((string) $plan, SubscriptionPlans::availableTo($merchant))) {
                 return $plan;
             }
         }
@@ -84,7 +84,7 @@ class PlanBilling
                 default => '',
             };
 
-            if (! SubscriptionPlans::valid($plan)) {
+            if (! array_key_exists($plan, SubscriptionPlans::availableTo($merchant))) {
                 throw ValidationException::withMessages(['plan' => 'There is no plan waiting for payment.']);
             }
 
@@ -144,7 +144,7 @@ class PlanBilling
         $stale = $merchant->subscription_started_at && $payment->created_at->lt($merchant->subscription_started_at);
 
         $eligible = $waiting && ! $stale && ! $merchant->isAdmin()
-            && SubscriptionPlans::valid($payment->plan)
+            && array_key_exists($payment->plan, SubscriptionPlans::availableTo($merchant))
             && (float) $order->amount >= (float) $payment->amount;
 
         $meta = [
