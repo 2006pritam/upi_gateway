@@ -27,11 +27,11 @@
                 </h1>
                 <p class="mt-6 text-lg text-slate-600 max-w-xl leading-relaxed">Dynamic QR for every order, automatic payment confirmation and signed webhooks. No settlement delays — money lands straight in your own UPI account.</p>
                 <div class="mt-10 flex flex-wrap gap-3">
-                    <a href="{{ route('register') }}" class="btn btn-primary btn-lg shadow-lg shadow-brand-600/30 hover:shadow-xl hover:shadow-brand-600/40 transition-all">Start for free <x-icon name="arrow-right" class="w-5 h-5" /></a>
+                    <a href="{{ route('register') }}" class="btn btn-primary btn-lg shadow-lg shadow-brand-600/30 hover:shadow-xl hover:shadow-brand-600/40 transition-all">Request account <x-icon name="arrow-right" class="w-5 h-5" /></a>
                     <a href="{{ route('docs') }}" class="btn btn-secondary btn-lg"><x-icon name="code" class="w-5 h-5" /> View API docs</a>
                 </div>
                 <div class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-500">
-                    @foreach (['No setup fee', 'Instant settlement', 'All UPI apps', 'Cancel anytime'] as $point)
+                    @foreach (['No setup fee', 'Instant settlement', 'All UPI apps', 'Admin-approved accounts'] as $point)
                         <span class="flex items-center gap-1.5"><x-icon name="check-circle" class="w-4 h-4 text-emerald-500" /> {{ $point }}</span>
                     @endforeach
                 </div>
@@ -277,85 +277,25 @@
         <div class="mx-auto max-w-6xl px-4 sm:px-6 text-center">
             <div class="text-sm font-semibold text-brand-600">Pricing</div>
             <h2 class="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">Simple and transparent</h2>
-            <p class="mt-4 text-lg text-slate-600">No per-transaction cut. Keep 100% of every payment.</p>
+            <p class="mt-4 text-lg text-slate-600">No per-transaction cut. Choose a plan, send your request, and start once it is approved.</p>
             <div class="mt-12 grid sm:grid-cols-3 gap-6 items-stretch">
-
-                {{-- Starter --}}
-                <div class="card p-8 text-left flex flex-col">
-                    <div class="font-semibold text-slate-900 text-lg">Starter</div>
-                    <p class="mt-1 text-sm text-slate-500">Perfect for individuals & small stores</p>
-                    <div class="mt-6 flex items-baseline gap-1">
-                        <span class="text-5xl font-extrabold tracking-tight text-slate-900">Free</span>
+                @foreach (\App\Support\SubscriptionPlans::PLANS as $plan)
+                    <div class="card p-8 text-left flex flex-col">
+                        <div class="font-semibold text-slate-900 text-lg">{{ $plan['label'] }}</div>
+                        <div class="mt-6 flex items-baseline gap-1">
+                            <span class="text-5xl font-extrabold tracking-tight text-slate-900">₹{{ number_format($plan['amount']) }}</span>
+                        </div>
+                        <div class="mt-1 text-sm text-slate-500">0% transaction fee</div>
+                        <ul class="mt-8 space-y-3 text-sm text-slate-700 flex-1">
+                            @foreach (['Payment links & API orders', 'Signed webhooks with retries', 'Dashboard & reports'] as $f)
+                                <li class="flex items-center gap-3"><x-icon name="check" class="w-5 h-5 text-emerald-500 shrink-0" /> {{ $f }}</li>
+                            @endforeach
+                        </ul>
+                        <a href="{{ route('register') }}" class="btn btn-primary w-full mt-8 py-3">Request account</a>
                     </div>
-                    <div class="mt-1 text-sm text-slate-500">0% transaction fee · forever</div>
-                    <ul class="mt-8 space-y-3 text-sm text-slate-700 flex-1">
-                        @foreach ([
-                            '1 UPI account',
-                            'Up to ₹50,000/day',
-                            'Payment links & API orders',
-                            'Manual UTR verification',
-                            'Basic dashboard',
-                        ] as $f)
-                            <li class="flex items-center gap-3"><x-icon name="check" class="w-5 h-5 text-emerald-500 shrink-0" /> {{ $f }}</li>
-                        @endforeach
-                    </ul>
-                    <a href="{{ route('register') }}" class="btn btn-secondary w-full mt-8 py-3">Get started free</a>
-                </div>
-
-                {{-- Pro --}}
-                <div class="card p-8 text-left flex flex-col ring-2 ring-brand-600 relative">
-                    <span class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-600 px-3 py-0.5 text-xs font-semibold text-white">Most popular</span>
-                    <div class="font-semibold text-slate-900 text-lg">Pro</div>
-                    <p class="mt-1 text-sm text-slate-500">For growing businesses</p>
-                    <div class="mt-6 flex items-baseline gap-1">
-                        <span class="text-5xl font-extrabold tracking-tight text-slate-900">₹999</span>
-                        <span class="text-slate-500">/month</span>
-                    </div>
-                    <div class="mt-1 text-sm text-slate-500">0% transaction fee</div>
-                    <ul class="mt-8 space-y-3 text-sm text-slate-700 flex-1">
-                        @foreach ([
-                            'Up to 5 UPI accounts',
-                            'Up to ₹5,00,000/day',
-                            'Auto Paytm for Business verification',
-                            'Signed webhooks with retries',
-                            'Multiple merchants support',
-                            'Dashboard & reports',
-                            'Priority email support',
-                        ] as $f)
-                            <li class="flex items-center gap-3"><x-icon name="check" class="w-5 h-5 text-brand-600 shrink-0" /> {{ $f }}</li>
-                        @endforeach
-                    </ul>
-                    <a href="{{ route('register') }}" class="btn btn-primary w-full mt-8 py-3">Start free trial</a>
-                </div>
-
-                {{-- Business --}}
-                <div class="card p-8 text-left flex flex-col">
-                    <div class="font-semibold text-slate-900 text-lg">Business</div>
-                    <p class="mt-1 text-sm text-slate-500">For high-volume operations</p>
-                    <div class="mt-6 flex items-baseline gap-1">
-                        <span class="text-5xl font-extrabold tracking-tight text-slate-900">₹2,999</span>
-                        <span class="text-slate-500">/month</span>
-                    </div>
-                    <div class="mt-1 text-sm text-slate-500">0% transaction fee</div>
-                    <ul class="mt-8 space-y-3 text-sm text-slate-700 flex-1">
-                        @foreach ([
-                            'Unlimited UPI accounts',
-                            'Unlimited daily volume',
-                            'Auto verification (all providers)',
-                            'Signed webhooks with retries',
-                            'White-label checkout page',
-                            'Advanced analytics & exports',
-                            'Dedicated account manager',
-                            'SLA-backed support',
-                        ] as $f)
-                            <li class="flex items-center gap-3"><x-icon name="check" class="w-5 h-5 text-emerald-500 shrink-0" /> {{ $f }}</li>
-                        @endforeach
-                    </ul>
-                    <a href="{{ route('register') }}" class="btn btn-secondary w-full mt-8 py-3">Contact sales</a>
-                </div>
-
+                @endforeach
             </div>
-            <p class="mt-8 text-sm text-slate-500">All plans include 0% transaction fee. No hidden charges. Cancel anytime.</p>
+            <p class="mt-8 text-sm text-slate-500">Payment is arranged directly with the admin. Your plan starts after approval and payment confirmation.</p>
         </div>
     </section>
 
@@ -373,7 +313,7 @@
                     ['How is a payment confirmed?', 'With a Paytm for Business account, we check the payment status automatically within seconds. For other UPI IDs, you or your customer can confirm with the UTR number from the dashboard.'],
                     ['How long does integration take?', 'Most developers integrate in under an hour using our REST API and webhooks. You can also create payment links from the dashboard without writing any code.'],
                     ['Is this legal without RBI registration?', 'Yes. Since payments go directly to your own UPI account and we never hold or settle funds, we are a software tool — not a payment aggregator. Always consult a legal advisor for your specific use case.'],
-                    ['Can I use multiple UPI accounts?', 'Yes. Pro and Business plans support multiple UPI accounts with automatic rotation and per-account daily limits.'],
+                    ['Can I use multiple UPI accounts?', 'Yes. You can add multiple UPI accounts with automatic rotation and per-account daily limits.'],
                 ] as [$q, $a])
                     <details class="group card px-6 py-5 open:shadow-md transition-shadow">
                         <summary class="flex cursor-pointer list-none items-center justify-between font-semibold text-slate-900 gap-4">
@@ -396,12 +336,12 @@
             <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.03\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-40"></div>
             <div class="relative">
                 <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80 ring-1 ring-white/20 mb-6">
-                    <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span> Free forever · No credit card needed
+                    <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span> Plans from ₹{{ number_format(\App\Support\SubscriptionPlans::PLANS['monthly']['amount']) }} · Approval required
                 </span>
                 <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">Start accepting UPI payments today</h2>
-                <p class="mt-4 text-lg text-slate-300 max-w-xl mx-auto">Set up in minutes. No paperwork, no setup fee. Money goes directly to your bank account.</p>
+                <p class="mt-4 text-lg text-slate-300 max-w-xl mx-auto">Request your account, get approved, and start collecting. Money goes directly to your bank account.</p>
                 <div class="mt-8 flex flex-wrap justify-center gap-3">
-                    <a href="{{ route('register') }}" class="btn btn-lg bg-white text-slate-900 hover:bg-slate-100 shadow-xl">Create free account <x-icon name="arrow-right" class="w-5 h-5" /></a>
+                    <a href="{{ route('register') }}" class="btn btn-lg bg-white text-slate-900 hover:bg-slate-100 shadow-xl">Request account <x-icon name="arrow-right" class="w-5 h-5" /></a>
                     <a href="{{ route('docs') }}" class="btn btn-lg bg-white/10 text-white hover:bg-white/20 ring-1 ring-white/20"><x-icon name="code" class="w-5 h-5" /> View API docs</a>
                 </div>
             </div>
@@ -412,7 +352,7 @@
     <div class="bg-brand-600 py-3.5">
         <div class="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p class="flex items-center gap-2 text-white text-sm font-medium"><x-icon name="bolt" class="w-4 h-4" /> Join hundreds of merchants already using {{ config('app.brand_name', 'eMudra') }}</p>
-            <a href="{{ route('register') }}" class="btn bg-white text-brand-700 hover:bg-brand-50 shrink-0 text-sm">Get started free <x-icon name="arrow-right" class="w-4 h-4" /></a>
+            <a href="{{ route('register') }}" class="btn bg-white text-brand-700 hover:bg-brand-50 shrink-0 text-sm">Request account <x-icon name="arrow-right" class="w-4 h-4" /></a>
         </div>
     </div>
 
@@ -439,7 +379,7 @@
                 <div class="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Account</div>
                 <ul class="space-y-3 text-sm">
                     <li><a href="{{ route('login') }}" class="hover:text-white transition-colors">Log in</a></li>
-                    <li><a href="{{ route('register') }}" class="hover:text-white transition-colors">Sign up free</a></li>
+                    <li><a href="{{ route('register') }}" class="hover:text-white transition-colors">Request account</a></li>
                     <li><a href="{{ route('dashboard') }}" class="hover:text-white transition-colors">Dashboard</a></li>
                 </ul>
             </div>
