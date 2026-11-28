@@ -30,12 +30,34 @@ class PlanBilling
             ->first();
     }
 
-    /** The merchant's latest plan payment that is still waiting: open checkout or UTR under review. */
+    /** A paid term that has run out: the merchant renews by simply paying again. */
+    public function isRenewal(User $merchant): bool
+    {
+        return $merchant->subscription_status === User::SUBSCRIPTION_EXPIRED || $merchant->subscriptionHasExpired();
+    }
+
+    /** The plan offered first on renewal: the one that just ended. */
+    public function renewalPlan(User $merchant): string
+    {
+        foreach ([$merchant->subscription_plan, $merchant->subscription_requested_plan] as $plan) {
+            if (SubscriptionPlans::valid((string) $plan)) {
+                return $plan;
+            }
+        }
+
+        return 'monthly';
+    }
+
+    /**
+     * The merchant's latest plan payment that is still waiting: open checkout or UTR
+     * under review. Checkouts older than the current term belong to the past.
+     */
     public function openPayment(User $merchant): ?PlanPayment
     {
         return PlanPayment::with('order')
             ->where('user_id', $merchant->id)
             ->whereNull('applied_at')
+            ->when($merchant->subscription_started_at, fn ($q, $start) => $q->where('created_at', '>=', $start))
             ->whereHas('order', fn ($q) => $q->where('status', Order::REVIEW)
                 ->orWhere(fn ($q) => $q->where('status', Order::PENDING)->where('expires_at', '>', now())))
             ->latest('id')
@@ -46,19 +68,24 @@ class PlanBilling
      * The order the merchant should pay now. An open one is reused, so pressing
      * the button twice never creates two payments.
      */
-    public function checkout(User $merchant, ?string $ip = null): Order
+    public function checkout(User $merchant, ?string $ip = null, ?string $chosenPlan = null): Order
     {
         $receiver = $this->receiver()
             ?? throw ValidationException::withMessages(['plan' => 'Online payment is not available right now. Please contact the admin.']);
 
-        return DB::transaction(function () use ($merchant, $receiver, $ip) {
+        return DB::transaction(function () use ($merchant, $receiver, $ip, $chosenPlan) {
             // Same lock order as OrderService::markPaid (admin first, then merchant).
             User::whereKey($receiver->id)->lockForUpdate()->firstOrFail();
             $merchant = User::whereKey($merchant->id)->lockForUpdate()->firstOrFail();
-            $plan = (string) $merchant->subscription_requested_plan;
+            // A first payment is for the plan the admin approved. A renewal may pick any plan.
+            $plan = match (true) {
+                $merchant->subscription_status === User::SUBSCRIPTION_PAYMENT_DUE => (string) $merchant->subscription_requested_plan,
+                $this->isRenewal($merchant) => $chosenPlan ?? $this->renewalPlan($merchant),
+                default => '',
+            };
 
-            if ($merchant->subscription_status !== User::SUBSCRIPTION_PAYMENT_DUE || ! SubscriptionPlans::valid($plan)) {
-                throw ValidationException::withMessages(['plan' => 'There is no approved plan waiting for payment.']);
+            if (! SubscriptionPlans::valid($plan)) {
+                throw ValidationException::withMessages(['plan' => 'There is no plan waiting for payment.']);
             }
 
             $open = $this->openPayment($merchant);
@@ -113,7 +140,10 @@ class PlanBilling
         $waiting = in_array($merchant->subscription_status, [User::SUBSCRIPTION_PAYMENT_DUE, User::SUBSCRIPTION_EXPIRED], true)
             || $merchant->subscriptionHasExpired();
 
-        $eligible = $waiting && ! $merchant->isAdmin()
+        // A checkout made before the current term began was settled some other way.
+        $stale = $merchant->subscription_started_at && $payment->created_at->lt($merchant->subscription_started_at);
+
+        $eligible = $waiting && ! $stale && ! $merchant->isAdmin()
             && SubscriptionPlans::valid($payment->plan)
             && (float) $order->amount >= (float) $payment->amount;
 

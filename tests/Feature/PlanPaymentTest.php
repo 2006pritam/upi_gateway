@@ -218,7 +218,7 @@ class PlanPaymentTest extends TestCase
 
     public function test_only_an_approved_plan_can_be_paid_online(): void
     {
-        foreach ([User::SUBSCRIPTION_PENDING, User::SUBSCRIPTION_REJECTED, User::SUBSCRIPTION_EXPIRED] as $status) {
+        foreach ([User::SUBSCRIPTION_PENDING, User::SUBSCRIPTION_REJECTED] as $status) {
             $this->flushSession();
             $this->actingAs($this->due('monthly', ['subscription_status' => $status]))
                 ->post(route('subscription.pay'))->assertRedirect(route('subscription.show'))->assertSessionHasErrors('plan');
@@ -229,19 +229,115 @@ class PlanPaymentTest extends TestCase
         $this->assertDatabaseCount('orders', 0);
     }
 
-    public function test_renewal_goes_from_expired_to_paid(): void
+    private function expired(string $plan = 'monthly'): User
     {
-        $merchant = $this->due('monthly', ['subscription_status' => User::SUBSCRIPTION_ACTIVE, 'subscription_plan' => 'monthly', 'subscription_expires_at' => now()->subDay()]);
+        return $this->due($plan, [
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_plan' => $plan,
+            'subscription_started_at' => now()->subMonths(13),
+            'subscription_expires_at' => now()->subMinute(),
+        ]);
+    }
 
-        $this->actingAs($merchant)->get(route('subscription.show'))->assertSee('Choose a renewal plan');
-        $this->post(route('subscription.request'), ['plan' => 'annual'])->assertSessionHasNoErrors();
-        $order = $this->startPayment($merchant->refresh());
-        $this->assertEquals(2100, $order->amount);
+    public function test_each_time_a_plan_ends_the_pay_screen_appears_and_paying_renews_it(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $merchant = $this->due('monthly');
+        $this->markPaid($this->startPayment($merchant), '100000000000');
+
+        foreach (range(1, 4) as $month) {
+            $this->travelTo($merchant->refresh()->subscription_expires_at->copy()->subSecond());
+            $this->flushSession();
+            $this->actingAs($merchant)->get(route('dashboard'))->assertOk();
+
+            $this->travel(1)->seconds();
+            $this->get(route('dashboard'))->assertRedirect(route('subscription.show'));
+            $this->get(route('subscription.show'))->assertOk()
+                ->assertSee('Subscription expired')->assertSee('Renew online by UPI')->assertSee('Pay ₹199 now');
+            $this->assertSame(User::SUBSCRIPTION_EXPIRED, $merchant->refresh()->subscription_status);
+
+            $order = $this->startPayment($merchant);
+            $this->assertEquals(199, $order->amount);
+            $this->assertFalse($merchant->refresh()->hasSubscriptionAccess());
+
+            $this->markPaid($order, '10000000000'.$month);
+
+            $this->assertTrue($merchant->refresh()->hasSubscriptionAccess());
+            $this->assertTrue($merchant->subscription_expires_at->equalTo(now()->addMonthsNoOverflow(1)));
+        }
+
+        $this->assertDatabaseCount('orders', 5);
+        $this->assertSame(5, PlanPayment::whereNotNull('applied_at')->count());
+    }
+
+    public function test_every_plan_offers_itself_again_when_it_ends(): void
+    {
+        foreach (['six_months' => '599', 'annual' => '2,100'] as $plan => $price) {
+            $this->flushSession();
+            $this->actingAs($this->expired($plan))->get(route('subscription.show'))->assertOk()->assertSee("Pay ₹{$price} now");
+        }
+    }
+
+    public function test_renewing_merchant_can_switch_plan_before_paying(): void
+    {
+        $merchant = $this->expired('monthly');
+        $this->actingAs($merchant)->post(route('subscription.pay'), ['plan' => 'annual']);
+        $annual = PlanPayment::latest('id')->first();
+        $this->assertSame('annual', $annual->plan);
+        $this->assertEquals(2100, $annual->order->amount);
+        $this->get(route('subscription.show'))->assertSee('Pay ₹199 now');
+
+        $this->post(route('subscription.pay'), ['plan' => 'six_months']);
+        $order = PlanPayment::latest('id')->first()->order;
+        $this->assertEquals(599, $order->amount);
 
         $this->markPaid($order);
+        $this->assertSame('six_months', $merchant->refresh()->subscription_plan);
+        $this->assertTrue($merchant->hasSubscriptionAccess());
+    }
 
-        $this->assertTrue($merchant->refresh()->hasSubscriptionAccess());
-        $this->assertSame('annual', $merchant->subscription_plan);
+    public function test_renewal_rejects_unknown_and_lifetime_plans(): void
+    {
+        $merchant = $this->expired();
+
+        foreach (['lifetime', 'free'] as $plan) {
+            $this->actingAs($merchant)->post(route('subscription.pay'), ['plan' => $plan])->assertSessionHasErrors('plan');
+        }
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_admin_handled_renewal_is_still_possible(): void
+    {
+        $merchant = $this->expired();
+        $this->actingAs($merchant)->get(route('subscription.show'))->assertSee('Paying the admin another way?');
+        $this->post(route('subscription.request'), ['plan' => 'annual'])->assertSessionHasNoErrors();
+        $this->assertSame(User::SUBSCRIPTION_PAYMENT_DUE, $merchant->refresh()->subscription_status);
+        $this->get(route('subscription.show'))->assertSee('Pay ₹2,100 now');
+    }
+
+    public function test_an_unfinished_review_from_an_earlier_term_does_not_block_renewal(): void
+    {
+        $merchant = $this->due('monthly');
+        $old = $this->startPayment($merchant);
+        $this->post(route('pay.utr', $old), ['utr' => '412345678901']);
+
+        // The admin saw the money and started the plan by hand, leaving the order in review.
+        $this->travel(1)->minutes();
+        $this->withoutMiddleware(RequirePassword::class);
+        $this->flushSession();
+        $this->actingAs($this->admin)->post(route('admin.merchants.activate', $merchant));
+
+        $this->travel(2)->months();
+        $this->flushSession();
+        $this->actingAs($merchant->refresh())->get(route('subscription.show'))->assertSee('Pay ₹199 now')->assertDontSee('Your payment is being verified');
+        $new = $this->startPayment($merchant);
+        $this->assertNotSame($old->id, $new->id);
+
+        // Approving the old order later must not hand out a second term.
+        app(OrderService::class)->approveCustomerUtr($old->refresh(), '412345678901');
+        $this->assertFalse($merchant->refresh()->hasSubscriptionAccess());
+        $this->assertDatabaseHas('admin_audit_logs', ['action' => 'subscription_payment_needs_review']);
     }
 
     public function test_without_an_admin_upi_account_the_manual_route_is_shown(): void

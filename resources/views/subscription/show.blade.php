@@ -6,8 +6,9 @@
 @php
     $user = auth()->user();
     $due = $user->subscription_status === \App\Models\User::SUBSCRIPTION_PAYMENT_DUE;
-    $dueAmount = \App\Support\SubscriptionPlans::amount((string) $user->subscription_requested_plan);
     $canPayOnline = $receiver !== null;
+    $payAmount = \App\Support\SubscriptionPlans::amount((string) $payPlan);
+    $showPay = $canPayOnline && $payAmount;
 @endphp
 <div class="min-h-full bg-slate-50 px-4 py-10 sm:px-6">
     <div class="mx-auto max-w-2xl">
@@ -43,7 +44,11 @@
                             @endif
                             @break
                         @case(\App\Models\User::SUBSCRIPTION_EXPIRED)
-                            Your paid term has ended. Dashboard, merchant actions, and API access are paused until you request a plan and its payment is confirmed.
+                            @if ($canPayOnline)
+                                Your plan has ended. Pay the plan fee below to renew; dashboard and API access return once the payment is verified.
+                            @else
+                                Your paid term has ended. Dashboard, merchant actions, and API access are paused until you request a plan and its payment is confirmed.
+                            @endif
                             @break
                         @case(\App\Models\User::SUBSCRIPTION_REJECTED)
                             The admin did not approve this account request. Contact the admin or submit a new request for review.
@@ -70,8 +75,8 @@
                     <div class="rounded-xl bg-slate-50 p-4">
                         <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Selected plan</div>
                         <div class="mt-1 font-semibold text-slate-900">
-                            {{ \App\Support\SubscriptionPlans::label(auth()->user()->subscription_status === \App\Models\User::SUBSCRIPTION_ACTIVE ? auth()->user()->subscription_plan : auth()->user()->subscription_requested_plan) }}
-                            @php $planKey = auth()->user()->subscription_status === \App\Models\User::SUBSCRIPTION_ACTIVE ? auth()->user()->subscription_plan : auth()->user()->subscription_requested_plan; @endphp
+                            @php $planKey = $renewing ? $payPlan : (auth()->user()->subscription_status === \App\Models\User::SUBSCRIPTION_ACTIVE ? auth()->user()->subscription_plan : auth()->user()->subscription_requested_plan); @endphp
+                            {{ \App\Support\SubscriptionPlans::label($planKey) }}
                             @if ($planKey && \App\Support\SubscriptionPlans::amount($planKey))
                                 · ₹{{ number_format(\App\Support\SubscriptionPlans::amount($planKey)) }}
                             @endif
@@ -89,15 +94,63 @@
                     @endif
                 </div>
 
-                @if (in_array(auth()->user()->subscription_status, [\App\Models\User::SUBSCRIPTION_EXPIRED, \App\Models\User::SUBSCRIPTION_REJECTED], true))
+                @if ($showPay)
+                    @php $reviewing = $openPayment?->order->status === \App\Models\Order::REVIEW; @endphp
+                    <div class="mt-8 rounded-xl border-2 border-brand-600 p-5">
+                        <div class="flex flex-wrap items-end justify-between gap-3">
+                            <div>
+                                <h2 class="font-semibold text-slate-900">{{ $renewing ? 'Renew online by UPI' : 'Pay online by UPI' }}</h2>
+                                <p class="mt-1 text-sm text-slate-600">{{ \App\Support\SubscriptionPlans::label($payPlan) }} plan · paid to {{ $receiver->displayName() }}</p>
+                            </div>
+                            <div class="text-2xl font-bold tabular-nums text-slate-900">₹{{ number_format($payAmount) }}</div>
+                        </div>
+                        @if ($reviewing)
+                            <p class="mt-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-900">Your payment is being verified. Don't pay again.</p>
+                            <a href="{{ route('pay.show', $openPayment->order) }}" class="btn btn-secondary mt-3 w-full justify-center">View payment status</a>
+                        @else
+                            <form method="POST" action="{{ route('subscription.pay') }}" class="mt-4">
+                                @csrf
+                                <button name="plan" value="{{ $payPlan }}" class="btn btn-primary btn-lg w-full justify-center">
+                                    <x-icon name="lock" class="h-5 w-5" /> {{ $openPayment?->plan === $payPlan ? 'Continue payment' : 'Pay ₹'.number_format($payAmount).' now' }}
+                                </button>
+                                <p class="mt-3 text-xs text-slate-500">Your plan starts automatically once the payment is verified. Pay the exact amount shown on the payment screen.</p>
+                                @if ($renewing)
+                                    <p class="mt-4 text-sm font-medium text-slate-700">Or renew with a different plan</p>
+                                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                                        @foreach ($plans as $key => $plan)
+                                            @continue($key === $payPlan)
+                                            <button name="plan" value="{{ $key }}" class="btn btn-secondary justify-center">{{ $plan['label'] }} — ₹{{ number_format($plan['amount']) }}</button>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </form>
+                        @endif
+                    </div>
+                @endif
+
+                {{-- With online renewal on offer, the admin-handled request is the fallback and stays out of the way. --}}
+                @if ($renewing && $showPay && ! ($openPayment?->order->status === \App\Models\Order::REVIEW))
+                    <details class="mt-4 rounded-xl border border-slate-200 p-5">
+                        <summary class="cursor-pointer text-sm font-semibold text-slate-900">Paying the admin another way?</summary>
+                        <p class="mt-2 text-sm text-slate-600">Send a renewal request, then arrange the payment with the admin.</p>
+                        <form method="POST" action="{{ route('subscription.request') }}" class="mt-4 flex flex-col gap-3 sm:flex-row">
+                            @csrf
+                            <label class="sr-only" for="plan">Subscription plan</label>
+                            <select id="plan" name="plan" class="input py-2.5" required>
+                                @foreach ($plans as $key => $plan)
+                                    <option value="{{ $key }}" @selected($payPlan === $key)>{{ $plan['label'] }} — ₹{{ number_format($plan['amount']) }}</option>
+                                @endforeach
+                            </select>
+                            <button class="btn btn-secondary shrink-0">Request renewal</button>
+                        </form>
+                    </details>
+                @elseif (! $showPay && ($renewing || auth()->user()->subscription_status === \App\Models\User::SUBSCRIPTION_REJECTED))
                     <div class="mt-8 rounded-xl border border-slate-200 p-5">
                         <h2 class="font-semibold text-slate-900">
                             {{ auth()->user()->subscription_status === \App\Models\User::SUBSCRIPTION_REJECTED ? 'Request account review again' : 'Choose a renewal plan' }}
                         </h2>
                         <p class="mt-1 text-sm text-slate-600">
-                            @if ($canPayOnline && $user->subscription_status !== \App\Models\User::SUBSCRIPTION_REJECTED)
-                                Choose a plan, then pay for it online on the next screen.
-                            @elseif ($canPayOnline)
+                            @if ($canPayOnline)
                                 After the admin approves your request, you can pay online here.
                             @else
                                 Payment is arranged directly with the admin.
@@ -117,30 +170,6 @@
                                 {{ auth()->user()->subscription_status === \App\Models\User::SUBSCRIPTION_REJECTED ? 'Send review request' : 'Request plan / renewal' }}
                             </button>
                         </form>
-                    </div>
-                @endif
-
-                @if ($due && $canPayOnline && $dueAmount)
-                    <div class="mt-8 rounded-xl border-2 border-brand-600 p-5">
-                        <div class="flex flex-wrap items-end justify-between gap-3">
-                            <div>
-                                <h2 class="font-semibold text-slate-900">Pay online by UPI</h2>
-                                <p class="mt-1 text-sm text-slate-600">{{ \App\Support\SubscriptionPlans::label($user->subscription_requested_plan) }} plan · paid to {{ $receiver->displayName() }}</p>
-                            </div>
-                            <div class="text-2xl font-bold tabular-nums text-slate-900">₹{{ number_format($dueAmount) }}</div>
-                        </div>
-                        @if ($openPayment?->order->status === \App\Models\Order::REVIEW)
-                            <p class="mt-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-900">Your payment is being verified. Don't pay again.</p>
-                            <a href="{{ route('pay.show', $openPayment->order) }}" class="btn btn-secondary mt-3 w-full justify-center">View payment status</a>
-                        @else
-                            <form method="POST" action="{{ route('subscription.pay') }}" class="mt-4">
-                                @csrf
-                                <button class="btn btn-primary btn-lg w-full justify-center">
-                                    <x-icon name="lock" class="h-5 w-5" /> {{ $openPayment ? 'Continue payment' : 'Pay ₹'.number_format($dueAmount).' now' }}
-                                </button>
-                            </form>
-                            <p class="mt-3 text-xs text-slate-500">Your plan starts automatically once the payment is verified. Pay the exact amount shown on the payment screen.</p>
-                        @endif
                     </div>
                 @endif
 

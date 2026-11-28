@@ -26,22 +26,29 @@ class MerchantSubscriptionController extends Controller
             $user->forceFill(['subscription_status' => User::SUBSCRIPTION_EXPIRED])->save();
         }
 
-        $due = $user->subscription_status === User::SUBSCRIPTION_PAYMENT_DUE;
+        $renewing = $billing->isRenewal($user);
+        $payable = $renewing || $user->subscription_status === User::SUBSCRIPTION_PAYMENT_DUE;
 
         return view('subscription.show', [
             'plans' => SubscriptionPlans::PLANS,
             'receiver' => $billing->receiver(),
-            'openPayment' => $due ? $billing->openPayment($user) : null,
+            'openPayment' => $payable ? $billing->openPayment($user) : null,
+            'renewing' => $renewing,
+            'payPlan' => $payable ? ($renewing ? $billing->renewalPlan($user) : $user->subscription_requested_plan) : null,
             'contactEmail' => config('billing.admin_contact_email'),
         ]);
     }
 
-    /** Send the merchant to checkout on the admin's gateway for the approved plan. */
+    /** Send the merchant to checkout on the admin's gateway for an approved or renewing plan. */
     public function pay(Request $request, PlanBilling $billing, OrderService $orders)
     {
         /** @var User $user */
         $user = $request->user();
         abort_if($user->isAdmin(), 404);
+
+        $data = $request->validate([
+            'plan' => ['nullable', 'string', Rule::in(array_keys(SubscriptionPlans::PLANS))],
+        ]);
 
         // An earlier checkout that ran out of time gets one last check before a new one is made.
         $stale = PlanPayment::where('user_id', $user->id)->whereNull('applied_at')
@@ -57,7 +64,7 @@ class MerchantSubscriptionController extends Controller
         }
 
         try {
-            $order = $billing->checkout($user, $request->ip());
+            $order = $billing->checkout($user, $request->ip(), $data['plan'] ?? null);
         } catch (ValidationException $e) {
             return redirect()->route('subscription.show')->withErrors(['plan' => collect($e->errors())->flatten()->first()]);
         }
