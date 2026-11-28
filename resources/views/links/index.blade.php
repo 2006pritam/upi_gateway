@@ -15,6 +15,14 @@
         </div>
         <x-input name="note" label="Payment note" maxlength="50" placeholder="Optional, shown in the UPI app" />
         <div class="mb-5">
+            <label for="l-description" class="label">Page description</label>
+            <textarea id="l-description" name="description" rows="3" maxlength="1000" class="input" placeholder="Optional, shown on the payment page">{{ old('description') }}</textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-x-4">
+            <x-input name="button_label" label="Button text" maxlength="30" placeholder="Pay Now" />
+            <x-input name="theme_color" label="Colour" type="color" value="#2563eb" class="h-11" />
+        </div>
+        <div class="mb-5">
             <label for="l-account" class="label">Receive in</label>
             <select id="l-account" name="payment_account_id" class="input">
                 <option value="">Automatic (rotation)</option>
@@ -40,6 +48,31 @@
                     <input readonly value="{{ $link->publicUrl() }}" class="input font-mono text-xs bg-slate-50">
                     <x-copy :text="$link->publicUrl()" />
                 </div>
+                <details class="mt-3 rounded-lg ring-1 ring-slate-200 p-3">
+                    <summary class="cursor-pointer text-sm font-semibold text-slate-700">Pay button for your website</summary>
+                    <p class="help">Paste this code where the button should appear.</p>
+                    <pre class="mt-3 whitespace-pre-wrap break-all rounded-lg bg-slate-900 text-slate-100 px-3 py-2 font-mono text-xs">{{ $link->buttonSnippet() }}</pre>
+                    <div class="mt-2"><x-copy :text="$link->buttonSnippet()" label="Copy button code" /></div>
+                    <p class="mt-3 text-xs text-amber-700">Confirm every payment with your webhook or the Order Status API before delivering anything. Browser callbacks can be faked.</p>
+                    <form method="POST" action="{{ route('links.update', $link) }}" class="mt-4 border-t border-slate-100 pt-4 space-y-3">
+                        @csrf @method('PUT')
+                        <div>
+                            <label for="d-{{ $link->id }}" class="label">Page description</label>
+                            <textarea id="d-{{ $link->id }}" name="description" rows="2" maxlength="1000" class="input">{{ $link->description }}</textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="b-{{ $link->id }}" class="label">Button text</label>
+                                <input id="b-{{ $link->id }}" name="button_label" maxlength="30" value="{{ $link->buttonLabel() }}" class="input">
+                            </div>
+                            <div>
+                                <label for="c-{{ $link->id }}" class="label">Colour</label>
+                                <input id="c-{{ $link->id }}" type="color" name="theme_color" value="{{ $link->themeColor() }}" class="input h-11">
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm">Save look</button>
+                    </form>
+                </details>
                 <div class="flex flex-wrap gap-2 mt-3">
                     <a href="{{ route('links.poster', $link) }}" target="_blank" class="btn btn-secondary btn-sm"><x-icon name="qr" class="w-4 h-4" /> QR poster</a>
                     <a href="https://wa.me/?text={{ urlencode($link->title.': '.$link->publicUrl()) }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm"><x-icon name="phone" class="w-4 h-4" /> WhatsApp</a>

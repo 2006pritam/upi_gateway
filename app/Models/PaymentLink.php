@@ -10,7 +10,9 @@ use Illuminate\Support\Str;
 /** A reusable, shareable link/QR: each visit creates a fresh order for the merchant. */
 class PaymentLink extends Model
 {
-    protected $fillable = ['title', 'amount', 'note', 'payment_account_id', 'is_active'];
+    public const DEFAULT_COLOR = '#2563eb';
+
+    protected $fillable = ['title', 'amount', 'note', 'payment_account_id', 'is_active', 'description', 'button_label', 'theme_color'];
 
     protected function casts(): array
     {
@@ -42,6 +44,23 @@ class PaymentLink extends Model
     public function publicUrl(): string
     {
         return route('link.show', $this->code);
+    }
+
+    public function buttonLabel(): string
+    {
+        return $this->button_label ?: 'Pay Now';
+    }
+
+    public function themeColor(): string
+    {
+        return $this->theme_color ?: self::DEFAULT_COLOR;
+    }
+
+    /** HTML a merchant pastes into their own website to show a Pay button. */
+    public function buttonSnippet(): string
+    {
+        return '<script src="'.asset('js/upi-button.js').'" data-page="'.$this->code
+            .'" data-label="'.e($this->buttonLabel()).'" data-color="'.$this->themeColor().'" async></script>';
     }
 
     public function isFixedAmount(): bool

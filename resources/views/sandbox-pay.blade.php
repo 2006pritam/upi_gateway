@@ -59,4 +59,5 @@
         </section>
     </div>
 </main>
+@include('pay._embed-notify')
 @endsection

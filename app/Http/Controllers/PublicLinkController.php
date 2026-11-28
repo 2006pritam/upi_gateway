@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PaymentLink;
 use App\Services\OrderService;
+use App\Support\EmbeddedCheckout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -11,9 +12,12 @@ class PublicLinkController extends Controller
 {
     public function __construct(private OrderService $orders) {}
 
-    public function show(PaymentLink $link)
+    public function show(Request $request, PaymentLink $link)
     {
-        return view('links.public', ['link' => $this->live($link)->load('user')]);
+        return view('links.public', [
+            'link' => $this->live($link)->load('user'),
+            'embedOrigin' => $request->query('embed_origin'),
+        ]);
     }
 
     /** Every visit that submits the form gets its own fresh order, then goes to the normal checkout page. */
@@ -24,6 +28,7 @@ class PublicLinkController extends Controller
         $data = $request->validate([
             'amount' => [$link->isFixedAmount() ? 'prohibited' : 'required', 'numeric', 'min:1', 'max:100000', 'decimal:0,2'],
             'customer_name' => ['nullable', 'string', 'max:100'],
+            'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_mobile' => ['nullable', 'string', 'max:20'],
         ]);
 
@@ -32,11 +37,14 @@ class PublicLinkController extends Controller
             'client_order_id' => 'LNK'.strtoupper(Str::random(14)),
             'payment_account_id' => $link->payment_account_id,
             'customer_name' => $data['customer_name'] ?? null,
+            'customer_email' => $data['customer_email'] ?? null,
             'customer_mobile' => $data['customer_mobile'] ?? null,
             'note' => $link->note ?: Str::limit($link->title, 50, ''),
             'payment_link_id' => $link->id,
             'created_ip' => $request->ip(),
         ]);
+
+        EmbeddedCheckout::remember($order, $request->input('embed_origin'));
 
         return redirect()->route('pay.show', $order);
     }

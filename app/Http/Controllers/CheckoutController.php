@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Services\Email\EmailPaymentService;
 use App\Services\OrderService;
+use App\Support\EmbeddedCheckout;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -17,14 +18,23 @@ class CheckoutController extends Controller
 {
     public function __construct(private OrderService $orders) {}
 
-    public function show(Order $order)
+    public function show(Request $request, Order $order)
     {
         $this->assertLive($order);
+        EmbeddedCheckout::remember($order, $request->query('embed_origin'));
         if ($order->isPending() && ($order->expires_at === null || $order->isPastExpiry())) {
             $order = $this->orders->check($order);
         }
 
-        return view('pay', ['order' => $order->load('paymentAccount', 'user')]);
+        $embedOrigin = EmbeddedCheckout::origin($order);
+
+        return view('pay', [
+            'order' => $order->load('paymentAccount', 'user'),
+            'embedOrigin' => $embedOrigin,
+            // Inside a button popup the redirect waits for a click, so the
+            // opening website hears the result first.
+            'returnUrl' => $embedOrigin && $order->status === Order::PAID ? $this->redirectUrl($order) : null,
+        ]);
     }
 
     /**
@@ -38,6 +48,7 @@ class CheckoutController extends Controller
         return response()->json([
             'status' => $order->status,
             'redirect' => in_array($order->status, [Order::PAID, Order::EXPIRED])
+                && EmbeddedCheckout::origin($order) === null
                 ? $this->redirectUrl($order)
                 : null,
         ]);
@@ -136,7 +147,7 @@ class CheckoutController extends Controller
         $this->assertLive($order);
         $order = $this->orders->check($order->load('paymentAccount'), force: true);
 
-        if ($order->status === Order::PAID && $order->redirect_url) {
+        if ($order->status === Order::PAID && $order->redirect_url && EmbeddedCheckout::origin($order) === null) {
             $redirectUrl = $this->redirectUrl($order);
             if ($redirectUrl !== null) {
                 return redirect()->away($redirectUrl);

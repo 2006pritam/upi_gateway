@@ -28,6 +28,7 @@ class PaymentLinkController extends Controller
             'amount' => ['nullable', 'numeric', 'min:1', 'max:100000', 'decimal:0,2'],
             'note' => ['nullable', 'string', 'max:50'],
             'payment_account_id' => ['nullable', 'integer'],
+            ...$this->appearanceRules(),
         ]);
 
         if (! empty($data['payment_account_id'])
@@ -38,6 +39,15 @@ class PaymentLinkController extends Controller
         $request->user()->paymentLinks()->create($data);
 
         return back()->with('status', 'Payment link created. Share the link or print the QR poster.');
+    }
+
+    /** Change how the payment page and Pay button look. */
+    public function update(Request $request, PaymentLink $link)
+    {
+        $this->own($request, $link);
+        $link->update($request->validate($this->appearanceRules()));
+
+        return back()->with('status', 'Page and button updated. Copy the button code again if you changed its text or colour.');
     }
 
     public function toggle(Request $request, PaymentLink $link)
@@ -63,6 +73,15 @@ class PaymentLinkController extends Controller
         $svg = (new Writer(new ImageRenderer(new RendererStyle(360, 1), new SvgImageBackEnd)))->writeString($link->publicUrl());
 
         return view('links.poster', ['link' => $link->load('user'), 'qr' => $svg]);
+    }
+
+    private function appearanceRules(): array
+    {
+        return [
+            'description' => ['nullable', 'string', 'max:1000'],
+            'button_label' => ['nullable', 'string', 'max:30'],
+            'theme_color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+        ];
     }
 
     private function own(Request $request, PaymentLink $link): void

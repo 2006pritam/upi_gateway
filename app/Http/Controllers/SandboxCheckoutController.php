@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\OrderService;
+use App\Support\EmbeddedCheckout;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -11,11 +12,15 @@ class SandboxCheckoutController extends Controller
 {
     public function __construct(private OrderService $orders) {}
 
-    public function show(Order $order)
+    public function show(Request $request, Order $order)
     {
         $this->assertSandbox($order);
+        EmbeddedCheckout::remember($order, $request->query('embed_origin'));
 
-        return view('sandbox-pay', ['order' => $order]);
+        return view('sandbox-pay', [
+            'order' => $order,
+            'embedOrigin' => EmbeddedCheckout::origin($order),
+        ]);
     }
 
     public function simulate(Request $request, Order $order)
@@ -44,6 +49,7 @@ class SandboxCheckoutController extends Controller
             return response()->view('sandbox-pay', [
                 'order' => $order,
                 'timeout' => true,
+                'embedOrigin' => EmbeddedCheckout::origin($order),
             ], 504);
         }
 

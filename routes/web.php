@@ -101,6 +101,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/links', [PaymentLinkController::class, 'index'])->name('links.index');
     Route::post('/links', [PaymentLinkController::class, 'store'])->name('links.store');
+    Route::put('/links/{link}', [PaymentLinkController::class, 'update'])->name('links.update');
     Route::post('/links/{link}/toggle', [PaymentLinkController::class, 'toggle'])->name('links.toggle');
     Route::delete('/links/{link}', [PaymentLinkController::class, 'destroy'])->name('links.destroy');
     Route::get('/links/{link}/poster', [PaymentLinkController::class, 'poster'])->name('links.poster');

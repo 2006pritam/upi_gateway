@@ -91,6 +91,9 @@
                             <div class="flex justify-between px-4 py-3"><dt class="text-slate-500">Paid at</dt><dd class="font-medium text-slate-900">{{ $order->paid_at?->format('d M Y, h:i A') }}</dd></div>
                         </dl>
                         <a href="{{ route('pay.receipt', $order) }}" target="_blank" class="mt-6 btn btn-secondary btn-sm"><x-icon name="receipt" class="w-4 h-4" /> Download receipt</a>
+                        @if ($returnUrl ?? null)
+                            <a href="{{ $returnUrl }}" class="btn btn-primary mt-3">Return to {{ $merchant }}</a>
+                        @endif
                         <p class="mt-4 text-xs text-slate-400">You can safely close this page.</p>
                         <button id="play-success-sound" type="button" class="mt-3 hidden rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50">Tap to hear payment confirmation</button>
                     </div>
@@ -255,6 +258,7 @@
         <div>Payments go directly to the merchant's bank account via UPI.</div>
     </footer>
 </div>
+@include('pay._embed-notify')
 @endsection
 
 @push('scripts')
