@@ -12,6 +12,7 @@ use App\Http\Controllers\EarningsController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\EmailSetupController;
 use App\Http\Controllers\InstallController;
+use App\Http\Controllers\MerchantSubscriptionController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentLinkController;
 use App\Http\Controllers\PublicLinkController;
@@ -64,86 +65,95 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
 });
 
-// ── Password confirmation (requires auth, no active check — even disabled accounts
-//    should be able to confirm before being bounced by EnsureActive) ────────────
-Route::middleware('auth')->group(function () {
+// Password confirmation is limited to enabled, subscription-active users.
+Route::middleware(['auth', 'active', 'subscription'])->group(function () {
     Route::get('/confirm-password', [ConfirmPasswordController::class, 'show'])->name('password.confirm');
     Route::post('/confirm-password', [ConfirmPasswordController::class, 'confirm']);
 });
 
 // ── Authenticated routes ──────────────────────────────────────────────────────
+// The plan page, plan request, and logout are the only merchant web actions
+// allowed before approval/payment or after expiration.
 Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/subscription', [MerchantSubscriptionController::class, 'show'])->name('subscription.show');
+    Route::post('/subscription/request', [MerchantSubscriptionController::class, 'requestPlan'])->middleware('throttle:10,1')->name('subscription.request');
 
-    Route::get('/accounts', [PaymentAccountController::class, 'index'])->name('accounts.index');
-    Route::get('/accounts/create', [PaymentAccountController::class, 'create'])->name('accounts.create');
-    Route::post('/accounts', [PaymentAccountController::class, 'store'])->name('accounts.store');
-    // Scope account bindings to the authenticated user so Merchant B cannot
-    // reach Merchant A's accounts even if they guess the numeric ID.
-    Route::get('/accounts/{account}/email-setup', [EmailSetupController::class, 'show'])->name('accounts.email-setup')->can('update', 'account');
-    Route::post('/accounts/{account}/limit', [PaymentAccountController::class, 'updateLimit'])->name('accounts.limit')->can('update', 'account');
-    Route::post('/accounts/{account}/toggle', [PaymentAccountController::class, 'toggle'])->name('accounts.toggle')->can('update', 'account');
-    Route::post('/accounts/{account}/default', [PaymentAccountController::class, 'makeDefault'])->name('accounts.default')->can('update', 'account');
-    Route::delete('/accounts/{account}', [PaymentAccountController::class, 'destroy'])->name('accounts.destroy')->can('delete', 'account');
+    Route::middleware('subscription')->group(function () {
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
-    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
-    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-    Route::post('/orders/{order}/recheck', [OrderController::class, 'recheck'])->name('orders.recheck');
-    Route::post('/orders/{order}/approve-utr', [OrderController::class, 'approveUtr'])->name('orders.approve-utr');
-    Route::post('/orders/{order}/reject-utr', [OrderController::class, 'rejectUtr'])->name('orders.reject-utr');
-    Route::post('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
-    Route::get('/webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
-    Route::post('/webhooks/{log}/resend', [WebhookController::class, 'resend'])->middleware('throttle:20,1')->name('webhooks.resend');
-    Route::post('/orders/{order}/mark-paid', [OrderController::class, 'markPaid'])->name('orders.mark-paid');
+        Route::get('/accounts', [PaymentAccountController::class, 'index'])->name('accounts.index');
+        Route::get('/accounts/create', [PaymentAccountController::class, 'create'])->name('accounts.create');
+        Route::post('/accounts', [PaymentAccountController::class, 'store'])->name('accounts.store');
+        // Scope account bindings to the authenticated user so Merchant B cannot
+        // reach Merchant A's accounts even if they guess the numeric ID.
+        Route::get('/accounts/{account}/email-setup', [EmailSetupController::class, 'show'])->name('accounts.email-setup')->can('update', 'account');
+        Route::post('/accounts/{account}/limit', [PaymentAccountController::class, 'updateLimit'])->name('accounts.limit')->can('update', 'account');
+        Route::post('/accounts/{account}/toggle', [PaymentAccountController::class, 'toggle'])->name('accounts.toggle')->can('update', 'account');
+        Route::post('/accounts/{account}/default', [PaymentAccountController::class, 'makeDefault'])->name('accounts.default')->can('update', 'account');
+        Route::delete('/accounts/{account}', [PaymentAccountController::class, 'destroy'])->name('accounts.destroy')->can('delete', 'account');
 
-    Route::get('/links', [PaymentLinkController::class, 'index'])->name('links.index');
-    Route::post('/links', [PaymentLinkController::class, 'store'])->name('links.store');
-    Route::put('/links/{link}', [PaymentLinkController::class, 'update'])->name('links.update');
-    Route::post('/links/{link}/toggle', [PaymentLinkController::class, 'toggle'])->name('links.toggle');
-    Route::delete('/links/{link}', [PaymentLinkController::class, 'destroy'])->name('links.destroy');
-    Route::get('/links/{link}/poster', [PaymentLinkController::class, 'poster'])->name('links.poster');
+        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
+        Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+        Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::post('/orders/{order}/recheck', [OrderController::class, 'recheck'])->name('orders.recheck');
+        Route::post('/orders/{order}/approve-utr', [OrderController::class, 'approveUtr'])->name('orders.approve-utr');
+        Route::post('/orders/{order}/reject-utr', [OrderController::class, 'rejectUtr'])->name('orders.reject-utr');
+        Route::post('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
+        Route::get('/webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
+        Route::post('/webhooks/{log}/resend', [WebhookController::class, 'resend'])->middleware('throttle:20,1')->name('webhooks.resend');
+        Route::post('/orders/{order}/mark-paid', [OrderController::class, 'markPaid'])->name('orders.mark-paid');
 
-    Route::get('/subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
-    Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store');
-    Route::post('/subscriptions/{subscription}', [SubscriptionController::class, 'update'])->name('subscriptions.update');
-    Route::post('/subscriptions/{subscription}/bill', [SubscriptionController::class, 'billNow'])->middleware('throttle:10,1')->name('subscriptions.bill');
-    Route::get('/earnings', EarningsController::class.'@index')->name('earnings.index');
+        Route::get('/links', [PaymentLinkController::class, 'index'])->name('links.index');
+        Route::post('/links', [PaymentLinkController::class, 'store'])->name('links.store');
+        Route::put('/links/{link}', [PaymentLinkController::class, 'update'])->name('links.update');
+        Route::post('/links/{link}/toggle', [PaymentLinkController::class, 'toggle'])->name('links.toggle');
+        Route::delete('/links/{link}', [PaymentLinkController::class, 'destroy'])->name('links.destroy');
+        Route::get('/links/{link}/poster', [PaymentLinkController::class, 'poster'])->name('links.poster');
 
-    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('/reports/export.csv', [ReportController::class, 'export'])->name('reports.export');
+        Route::get('/subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
+        Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store');
+        Route::post('/subscriptions/{subscription}', [SubscriptionController::class, 'update'])->name('subscriptions.update');
+        Route::post('/subscriptions/{subscription}/bill', [SubscriptionController::class, 'billNow'])->middleware('throttle:10,1')->name('subscriptions.bill');
+        Route::get('/earnings', EarningsController::class.'@index')->name('earnings.index');
 
-    Route::post('/settings/alerts', [SettingsController::class, 'updateAlerts'])->name('settings.alerts');
-    Route::post('/settings/alerts/test', [SettingsController::class, 'testTelegram'])->middleware('throttle:5,1')->name('settings.alerts.test');
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export.csv', [ReportController::class, 'export'])->name('reports.export');
 
-    Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
-    Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
-    Route::post('/settings/webhook', [SettingsController::class, 'updateWebhook'])->name('settings.webhook');
-    Route::post('/settings/webhook-endpoints', [SettingsController::class, 'storeWebhookEndpoint'])->name('settings.webhook-endpoints.store');
-    Route::delete('/settings/webhook-endpoints/{endpoint}', [SettingsController::class, 'destroyWebhookEndpoint'])->name('settings.webhook-endpoints.destroy');
-    Route::post('/settings/sandbox/webhook', [SettingsController::class, 'updateSandboxWebhook'])->name('settings.sandbox.webhook');
-    Route::post('/settings/sandbox/regenerate-keys', [SettingsController::class, 'regenerateSandboxKeys'])->name('settings.sandbox.regenerate');
-    Route::post('/settings/sandbox/revoke-keys', [SettingsController::class, 'revokeSandboxKeys'])->name('settings.sandbox.revoke');
-    Route::post('/settings/rotation', [SettingsController::class, 'updateRotation'])->name('settings.rotation');
-    Route::post('/settings/redirect-domains', [SettingsController::class, 'updateRedirectDomains'])->name('settings.redirect-domains');
-    Route::post('/settings/api-keys', [ApiKeyController::class, 'store'])->middleware('throttle:20,1')->name('api-keys.store');
-    Route::post('/settings/api-keys/{apiKey}', [ApiKeyController::class, 'update'])->name('api-keys.update');
-    Route::delete('/settings/api-keys/{apiKey}', [ApiKeyController::class, 'destroy'])->name('api-keys.destroy');
-    Route::post('/settings/regenerate-keys', [SettingsController::class, 'regenerateKeys'])->name('settings.regenerate');
+        Route::post('/settings/alerts', [SettingsController::class, 'updateAlerts'])->name('settings.alerts');
+        Route::post('/settings/alerts/test', [SettingsController::class, 'testTelegram'])->middleware('throttle:5,1')->name('settings.alerts.test');
 
-    // Password change — uses Auth::logoutOtherDevices to sign out other sessions.
-    Route::get('/settings/password', [ChangePasswordController::class, 'show'])->name('password.change.show');
-    Route::put('/settings/password', [ChangePasswordController::class, 'update'])->name('password.change');
+        Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+        Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
+        Route::post('/settings/webhook', [SettingsController::class, 'updateWebhook'])->name('settings.webhook');
+        Route::post('/settings/webhook-endpoints', [SettingsController::class, 'storeWebhookEndpoint'])->name('settings.webhook-endpoints.store');
+        Route::delete('/settings/webhook-endpoints/{endpoint}', [SettingsController::class, 'destroyWebhookEndpoint'])->name('settings.webhook-endpoints.destroy');
+        Route::post('/settings/sandbox/webhook', [SettingsController::class, 'updateSandboxWebhook'])->name('settings.sandbox.webhook');
+        Route::post('/settings/sandbox/regenerate-keys', [SettingsController::class, 'regenerateSandboxKeys'])->name('settings.sandbox.regenerate');
+        Route::post('/settings/sandbox/revoke-keys', [SettingsController::class, 'revokeSandboxKeys'])->name('settings.sandbox.revoke');
+        Route::post('/settings/rotation', [SettingsController::class, 'updateRotation'])->name('settings.rotation');
+        Route::post('/settings/redirect-domains', [SettingsController::class, 'updateRedirectDomains'])->name('settings.redirect-domains');
+        Route::post('/settings/api-keys', [ApiKeyController::class, 'store'])->middleware('throttle:20,1')->name('api-keys.store');
+        Route::post('/settings/api-keys/{apiKey}', [ApiKeyController::class, 'update'])->name('api-keys.update');
+        Route::delete('/settings/api-keys/{apiKey}', [ApiKeyController::class, 'destroy'])->name('api-keys.destroy');
+        Route::post('/settings/regenerate-keys', [SettingsController::class, 'regenerateKeys'])->name('settings.regenerate');
 
-    // Admin routes — require password re-confirmation within the last 15 minutes.
-    Route::prefix('admin')->name('admin.')->middleware(['admin', 'password.confirm:,900'])->group(function () {
-        Route::get('/merchants', [AdminController::class, 'merchants'])->name('merchants');
-        Route::post('/merchants/{user}/toggle', [AdminController::class, 'toggleMerchant'])->name('merchants.toggle');
-        Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
-        Route::get('/orders/{order}', [AdminController::class, 'showOrder'])->name('order.show');
-        Route::get('/transaction-debugger', [TransactionDebuggerController::class, 'index'])->name('transactions.index');
-        Route::get('/transaction-debugger/{order}', [TransactionDebuggerController::class, 'show'])->name('transactions.show');
+        // Password change — uses Auth::logoutOtherDevices to sign out other sessions.
+        Route::get('/settings/password', [ChangePasswordController::class, 'show'])->name('password.change.show');
+        Route::put('/settings/password', [ChangePasswordController::class, 'update'])->name('password.change');
+
+        // Admin routes — require password re-confirmation within the last 15 minutes.
+        Route::prefix('admin')->name('admin.')->middleware(['admin', 'password.confirm:,900'])->group(function () {
+            Route::get('/merchants', [AdminController::class, 'merchants'])->name('merchants');
+            Route::post('/merchants/{user}/toggle', [AdminController::class, 'toggleMerchant'])->name('merchants.toggle');
+            Route::post('/merchants/{user}/approve', [AdminController::class, 'approveMerchant'])->name('merchants.approve');
+            Route::post('/merchants/{user}/reject', [AdminController::class, 'rejectMerchant'])->name('merchants.reject');
+            Route::post('/merchants/{user}/activate', [AdminController::class, 'activateSubscription'])->name('merchants.activate');
+            Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
+            Route::get('/orders/{order}', [AdminController::class, 'showOrder'])->name('order.show');
+            Route::get('/transaction-debugger', [TransactionDebuggerController::class, 'index'])->name('transactions.index');
+            Route::get('/transaction-debugger/{order}', [TransactionDebuggerController::class, 'show'])->name('transactions.show');
+        });
     });
 });

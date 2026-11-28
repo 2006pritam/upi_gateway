@@ -18,7 +18,7 @@ class RotationTest extends TestCase
     {
         parent::setUp();
 
-        $this->merchant = User::create(['name' => 'Ravi', 'email' => 'ravi@example.com', 'password' => 'password123']);
+        $this->merchant = User::create(['name' => 'Ravi', 'email' => 'ravi@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
         $this->merchant->regenerateApiCredentials();
     }
 
@@ -114,7 +114,7 @@ class RotationTest extends TestCase
     public function test_unknown_or_foreign_account_id_is_rejected(): void
     {
         $this->account('Mine');
-        $stranger = User::create(['name' => 'X', 'email' => 'x@example.com', 'password' => 'password123']);
+        $stranger = User::create(['name' => 'X', 'email' => 'x@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
         $foreign = $stranger->paymentAccounts()->create(['provider' => 'manual', 'label' => 'X', 'upi_id' => 'x@upi', 'payee_name' => 'X']);
 
         $this->order(10, ['payment_account_id' => $foreign->id])->assertUnprocessable()->assertJsonValidationErrors('payment_account_id');

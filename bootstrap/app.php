@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticateApiKey;
 use App\Http\Middleware\EnsureActive;
 use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureSubscriptionActive;
 use App\Http\Middleware\RedirectToInstall;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => EnsureAdmin::class,
             'active' => EnsureActive::class,
+            'subscription' => EnsureSubscriptionActive::class,
             'api.key' => AuthenticateApiKey::class,
         ]);
 

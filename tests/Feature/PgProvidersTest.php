@@ -24,7 +24,7 @@ class PgProvidersTest extends TestCase
         parent::setUp();
         Queue::fake();
 
-        $this->merchant = User::create(['name' => 'Ravi', 'business_name' => 'Ravi Store', 'email' => 'ravi@example.com', 'password' => 'password123']);
+        $this->merchant = User::create(['name' => 'Ravi', 'business_name' => 'Ravi Store', 'email' => 'ravi@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
         $this->merchant->regenerateApiCredentials();
         // Allow redirect_url used in createOrder() to pass the allowlist check.
         $this->merchant->update(['redirect_domains' => ['shop.test']]);

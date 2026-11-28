@@ -19,6 +19,7 @@ class PaymentFlowTest extends TestCase
     {
         $user = User::create([
             'name' => 'Ravi', 'business_name' => 'Ravi Store', 'email' => 'ravi@example.com', 'password' => 'password123',
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
         ]);
         $user->regenerateApiCredentials();
         $user->paymentAccounts()->create([
@@ -38,8 +39,25 @@ class PaymentFlowTest extends TestCase
     {
         $this->post('/register', [
             'name' => 'Asha', 'business_name' => 'Asha Foods', 'email' => 'asha@example.com',
+            'plan' => 'monthly',
             'password' => 'password123', 'password_confirmation' => 'password123',
-        ])->assertRedirect(route('accounts.create'));
+        ])->assertRedirect(route('subscription.show'));
+
+        $merchant = User::where('email', 'asha@example.com')->firstOrFail();
+        $this->assertSame(User::SUBSCRIPTION_PENDING, $merchant->subscription_status);
+        $this->actingAs($merchant)->get(route('dashboard'))->assertRedirect(route('subscription.show'));
+
+        $startedAt = now();
+        $merchant->forceFill([
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_plan' => 'monthly',
+            'subscription_paid_at' => $startedAt,
+            'subscription_started_at' => $startedAt,
+            'subscription_expires_at' => $startedAt->copy()->addMonth(),
+        ])->save();
+        $merchant->regenerateApiCredentials();
+        $this->flushSession();
+        $this->actingAs($merchant);
 
         $this->post('/accounts', [
             'provider' => 'paytm_business', 'label' => 'Shop', 'upi_id' => 'paytmqr999@paytm',
@@ -147,7 +165,7 @@ class PaymentFlowTest extends TestCase
         $orderNo = $this->postJson('/api/v1/orders', ['amount' => 10, 'client_order_id' => 'X1'], $this->apiHeaders($owner))
             ->json('data.order_id');
 
-        $other = User::create(['name' => 'B', 'email' => 'b@example.com', 'password' => 'password123']);
+        $other = User::create(['name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
         $this->actingAs($other)->get("/orders/{$orderNo}")->assertNotFound();
         $this->actingAs($other)->post("/orders/{$orderNo}/mark-paid", ['utr' => '123456789'])->assertNotFound();
         $this->actingAs($other)->get('/admin/merchants')->assertForbidden();

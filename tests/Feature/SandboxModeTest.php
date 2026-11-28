@@ -23,6 +23,7 @@ class SandboxModeTest extends TestCase
             'name' => 'Sandbox Merchant',
             'business_name' => 'Test Shop',
             'email' => $email,
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
             'password' => 'password12345',
         ]);
         $merchant->regenerateApiCredentials();

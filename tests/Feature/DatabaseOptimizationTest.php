@@ -34,6 +34,7 @@ class DatabaseOptimizationTest extends TestCase
             'name' => 'Ravi',
             'business_name' => 'Ravi Store',
             'email' => 'ravi@example.com',
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
             'password' => 'password123',
         ]);
         $user->regenerateApiCredentials();
@@ -150,7 +151,7 @@ class DatabaseOptimizationTest extends TestCase
     {
         $merchantA = $this->merchant();
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
         $merchantB->paymentAccounts()->create([
             'provider' => 'manual', 'label' => 'X', 'upi_id' => 'b@upi',
@@ -243,7 +244,7 @@ class DatabaseOptimizationTest extends TestCase
     public function test_resolve_account_rejects_foreign_account_id(): void
     {
         $merchant = $this->merchant();
-        $other = User::create(['name' => 'X', 'email' => 'x@example.com', 'password' => 'password123']);
+        $other = User::create(['name' => 'X', 'email' => 'x@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
         $foreign = $other->paymentAccounts()->create([
             'provider' => 'manual', 'label' => 'X', 'upi_id' => 'x@upi', 'payee_name' => 'X',
         ]);

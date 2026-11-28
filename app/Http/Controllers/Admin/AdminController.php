@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminAuditLog;
 use App\Models\Order;
 use App\Models\User;
+use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -23,7 +26,10 @@ class AdminController extends Controller
             ->latest()
             ->paginate(25);
 
-        return view('admin.merchants', compact('merchants'));
+        return view('admin.merchants', [
+            'merchants' => $merchants,
+            'plans' => SubscriptionPlans::PLANS,
+        ]);
     }
 
     public function toggleMerchant(Request $request, User $user)
@@ -31,18 +37,95 @@ class AdminController extends Controller
         abort_if($user->isAdmin(), 403);
 
         $user->update(['is_active' => ! $user->is_active]);
-
-        // Audit log
-        AdminAuditLog::create([
-            'admin_id' => $request->user()->id,
-            'action' => $user->is_active ? 'merchant_enabled' : 'merchant_disabled',
-            'subject_type' => 'user',
-            'subject_id' => $user->id,
-            'meta' => ['email' => $user->email],
-            'ip' => $request->ip(),
+        $this->audit($request, $user, $user->is_active ? 'merchant_enabled' : 'merchant_disabled', [
+            'email' => $user->email,
         ]);
 
         return back()->with('status', "{$user->displayName()} ".($user->is_active ? 'enabled.' : 'disabled.'));
+    }
+
+    public function approveMerchant(Request $request, User $user)
+    {
+        abort_if($user->isAdmin(), 403);
+        abort_unless($user->subscription_status === User::SUBSCRIPTION_PENDING, 409, 'This account request is no longer awaiting review.');
+
+        $data = $request->validate([
+            'plan' => ['required', 'string', Rule::in(array_keys(SubscriptionPlans::PLANS))],
+        ]);
+
+        DB::transaction(function () use ($request, $user, $data) {
+            $merchant = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            abort_unless($merchant->subscription_status === User::SUBSCRIPTION_PENDING, 409, 'This account request is no longer awaiting review.');
+
+            $merchant->forceFill([
+                'subscription_status' => User::SUBSCRIPTION_PAYMENT_DUE,
+                'subscription_requested_plan' => $data['plan'],
+                'subscription_approved_at' => now(),
+            ])->save();
+
+            $this->audit($request, $merchant, 'subscription_request_approved', [
+                'email' => $merchant->email,
+                'plan' => $merchant->subscription_requested_plan,
+                'amount_inr' => SubscriptionPlans::amount($merchant->subscription_requested_plan),
+            ]);
+        });
+
+        return back()->with('status', "{$user->displayName()} is approved. Subscription access starts only after payment is received and confirmed here.");
+    }
+
+    public function rejectMerchant(Request $request, User $user)
+    {
+        abort_if($user->isAdmin(), 403);
+        abort_unless($user->subscription_status === User::SUBSCRIPTION_PENDING, 409, 'Only a new account request can be rejected.');
+
+        $user->forceFill(['subscription_status' => User::SUBSCRIPTION_REJECTED])->save();
+        $this->audit($request, $user, 'subscription_request_rejected', ['email' => $user->email]);
+
+        return back()->with('status', "{$user->displayName()}'s account request was rejected.");
+    }
+
+    public function activateSubscription(Request $request, User $user)
+    {
+        abort_if($user->isAdmin(), 403);
+
+        $data = $request->validate([
+            'payment_reference' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        DB::transaction(function () use ($request, $user, $data) {
+            $merchant = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            abort_unless(
+                $merchant->subscription_status === User::SUBSCRIPTION_PAYMENT_DUE
+                    && SubscriptionPlans::valid((string) $merchant->subscription_requested_plan),
+                409,
+                'This merchant has no approved plan awaiting payment confirmation.'
+            );
+
+            $plan = $merchant->subscription_requested_plan;
+            $startedAt = now();
+            $merchant->forceFill([
+                'subscription_status' => User::SUBSCRIPTION_ACTIVE,
+                'subscription_plan' => $plan,
+                'subscription_paid_at' => $startedAt,
+                'subscription_started_at' => $startedAt,
+                'subscription_expires_at' => SubscriptionPlans::expiry($plan, $startedAt),
+            ])->save();
+
+            if (! $merchant->api_key) {
+                $merchant->regenerateApiCredentials();
+            }
+
+            $this->audit($request, $merchant, 'subscription_payment_confirmed', [
+                'email' => $merchant->email,
+                'plan' => $plan,
+                'amount_inr' => SubscriptionPlans::amount($plan),
+                'payment_reference' => $data['payment_reference'] ?? null,
+                'starts_at' => $startedAt->toIso8601String(),
+                'expires_at' => $merchant->subscription_expires_at->toIso8601String(),
+            ]);
+        });
+
+        return back()->with('status', "Payment confirmed and {$user->displayName()}'s subscription is active.");
     }
 
     public function orders(Request $request)
@@ -56,10 +139,7 @@ class AdminController extends Controller
         return view('admin.orders', ['orders' => $query->paginate(30)->withQueryString()]);
     }
 
-    /**
-     * Admin view of a specific merchant order — read-only.
-     * Logs the access for audit trail.
-     */
+    /** Admin view of a specific merchant order — read-only, with access audit. */
     public function showOrder(Request $request, Order $order)
     {
         AdminAuditLog::create([
@@ -74,6 +154,18 @@ class AdminController extends Controller
         return view('orders.show', [
             'order' => $order->load('paymentAccount', 'webhookLogs', 'user'),
             'readOnly' => true,
+        ]);
+    }
+
+    private function audit(Request $request, User $merchant, string $action, array $meta): void
+    {
+        AdminAuditLog::create([
+            'admin_id' => $request->user()->id,
+            'action' => $action,
+            'subject_type' => 'user',
+            'subject_id' => $merchant->id,
+            'meta' => $meta,
+            'ip' => $request->ip(),
         ]);
     }
 }

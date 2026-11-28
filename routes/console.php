@@ -67,7 +67,7 @@ Artisan::command('subscriptions:bill', function (\App\Services\SubscriptionServi
     $n = 0;
     \App\Models\Subscription::with('user')->where('status', 'active')->whereDate('next_due_at', '<=', today())->orderBy('id')
         ->each(function ($sub) use ($service, &$n) {
-            if ($sub->user?->is_active && $service->bill($sub)) {
+            if ($sub->user?->is_active && $sub->user->hasSubscriptionAccess() && $service->bill($sub)) {
                 $n++;
             }
         });

@@ -61,6 +61,17 @@ class AuthenticateApiKey
                 ->header('X-Request-Id', $requestId);
         }
 
+        if ($merchant->subscriptionHasExpired()) {
+            $merchant->forceFill(['subscription_status' => User::SUBSCRIPTION_EXPIRED])->save();
+        }
+
+        if (! $merchant->hasSubscriptionAccess()) {
+            return response()->json([
+                'message' => 'Merchant subscription is not active. Contact the administrator to request or renew access.',
+                'subscription_status' => $merchant->subscription_status,
+            ], 403)->header('X-Request-Id', $requestId);
+        }
+
         $request->setUserResolver(fn () => $merchant);
         $request->attributes->set('payment_environment', $environment);
         $request->attributes->set('api_key_id', $apiKey?->id);

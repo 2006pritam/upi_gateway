@@ -38,6 +38,7 @@ class AuthAccessControlTest extends TestCase
             'name' => 'Ravi',
             'business_name' => 'Ravi Store',
             'email' => 'ravi@example.com',
+            'subscription_status' => User::SUBSCRIPTION_ACTIVE,
             'password' => 'password123',
         ], $attrs));
         $user->regenerateApiCredentials();
@@ -179,7 +180,7 @@ class AuthAccessControlTest extends TestCase
         $order = $this->order($merchantA);
 
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
 
         $this->actingAs($merchantB)
@@ -193,7 +194,7 @@ class AuthAccessControlTest extends TestCase
         $order = $this->order($merchantA);
 
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
 
         $this->actingAs($merchantB)
@@ -209,7 +210,7 @@ class AuthAccessControlTest extends TestCase
         $order = $this->order($merchantA);
 
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
 
         $this->actingAs($merchantB)
@@ -223,7 +224,7 @@ class AuthAccessControlTest extends TestCase
         $order = $this->order($merchantA);
 
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
         $merchantB->regenerateApiCredentials();
         $merchantB->paymentAccounts()->create([
@@ -243,7 +244,7 @@ class AuthAccessControlTest extends TestCase
         $account = $merchantA->paymentAccounts()->first();
 
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
 
         $this->actingAs($merchantB)
@@ -260,7 +261,7 @@ class AuthAccessControlTest extends TestCase
         $account = $merchantA->paymentAccounts()->first();
 
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
 
         $this->actingAs($merchantB)
@@ -274,7 +275,7 @@ class AuthAccessControlTest extends TestCase
         $account = $merchantA->paymentAccounts()->first();
 
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
 
         $this->actingAs($merchantB)
@@ -290,7 +291,7 @@ class AuthAccessControlTest extends TestCase
         $account = $merchantA->paymentAccounts()->first();
 
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
 
         $this->actingAs($merchantB)
@@ -313,7 +314,7 @@ class AuthAccessControlTest extends TestCase
     {
         $merchantA = $this->merchant();
         $merchantB = User::create([
-            'name' => 'B', 'email' => 'b@example.com', 'password' => 'password123',
+            'name' => 'B', 'email' => 'b@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123',
         ]);
 
         $this->actingAs($merchantA)

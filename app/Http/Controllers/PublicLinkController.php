@@ -51,7 +51,7 @@ class PublicLinkController extends Controller
 
     private function live(PaymentLink $link): PaymentLink
     {
-        abort_unless($link->is_active && $link->user?->is_active, 404);
+        abort_unless($link->is_active && $link->user?->is_active && $link->user->hasSubscriptionAccess(), 404);
 
         return $link;
     }

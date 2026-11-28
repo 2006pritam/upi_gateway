@@ -27,7 +27,7 @@ class FamEmailVerificationTest extends TestCase
     {
         parent::setUp();
         Queue::fake();
-        $this->merchant = User::create(['name' => 'Ravi', 'business_name' => 'Ravi Store', 'email' => 'ravi@example.com', 'password' => 'password123']);
+        $this->merchant = User::create(['name' => 'Ravi', 'business_name' => 'Ravi Store', 'email' => 'ravi@example.com', 'password' => 'password123', 'subscription_status' => User::SUBSCRIPTION_ACTIVE]);
         $this->account = $this->merchant->paymentAccounts()->create([
             'provider' => 'fam_email', 'label' => 'Fam', 'upi_id' => 'ravi@famg', 'payee_name' => 'Ravi',
             'credentials' => ['ingest_secret' => 'secret-secret-secret'],
@@ -207,7 +207,7 @@ class FamEmailVerificationTest extends TestCase
 
     public function test_setup_page_rejects_other_merchants(): void
     {
-        $other = User::create(['name' => 'X', 'email' => 'x@example.com', 'password' => 'password123']);
+        $other = User::create(['name' => 'X', 'email' => 'x@example.com', 'password' => 'password123', 'subscription_status' => User::SUBSCRIPTION_ACTIVE]);
         $this->actingAs($other)->get(route('accounts.email-setup', $this->account))->assertForbidden();
     }
 

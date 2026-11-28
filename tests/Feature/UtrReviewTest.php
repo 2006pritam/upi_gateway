@@ -21,7 +21,7 @@ class UtrReviewTest extends TestCase
         parent::setUp();
         Queue::fake();
 
-        $this->merchant = User::create(['name' => 'Ravi', 'business_name' => 'Ravi Store', 'email' => 'ravi@example.com', 'password' => 'password123']);
+        $this->merchant = User::create(['name' => 'Ravi', 'business_name' => 'Ravi Store', 'email' => 'ravi@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
         $this->merchant->paymentAccounts()->create(['provider' => 'manual', 'label' => 'GPay', 'upi_id' => 'ravi@okaxis', 'payee_name' => 'Ravi']);
     }
 
@@ -164,7 +164,7 @@ class UtrReviewTest extends TestCase
         $order = $this->order();
         $this->post(route('pay.utr', $order), ['utr' => '412345678901']);
 
-        $other = User::create(['name' => 'X', 'email' => 'x@example.com', 'password' => 'password123']);
+        $other = User::create(['name' => 'X', 'email' => 'x@example.com', 'subscription_status' => User::SUBSCRIPTION_ACTIVE, 'password' => 'password123']);
         $this->actingAs($other)->post(route('orders.approve-utr', $order), ['bank_utr' => '412345678901'])->assertNotFound();
         $this->assertSame(Order::REVIEW, $order->fresh()->status);
     }

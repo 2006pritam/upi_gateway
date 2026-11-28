@@ -20,9 +20,12 @@
             ['docs', 'API Docs', 'book', 'docs'],
         ],
     ];
+    if (! $user->isAdmin()) {
+        $sections['Payments'][] = ['subscription.show', 'My plan', 'shield', 'subscription.*'];
+    }
     if ($user->isAdmin()) {
         $sections['Admin'] = [
-            ['admin.merchants', 'Merchants', 'users', 'admin.merchants*'],
+            ['admin.merchants', 'Account requests & billing', 'users', 'admin.merchants*'],
             ['admin.orders', 'All Orders', 'chart', 'admin.orders'],
             ['admin.transactions.index', 'Transaction Debugger', 'search', 'admin.transactions.*'],
         ];
