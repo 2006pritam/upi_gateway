@@ -78,6 +78,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/subscription', [MerchantSubscriptionController::class, 'show'])->name('subscription.show');
     Route::post('/subscription/request', [MerchantSubscriptionController::class, 'requestPlan'])->middleware('throttle:10,1')->name('subscription.request');
+    Route::post('/subscription/pay', [MerchantSubscriptionController::class, 'pay'])->middleware('throttle:6,1')->name('subscription.pay');
 
     Route::middleware('subscription')->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');

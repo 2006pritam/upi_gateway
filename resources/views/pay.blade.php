@@ -94,6 +94,9 @@
                         @if ($returnUrl ?? null)
                             <a href="{{ $returnUrl }}" class="btn btn-primary mt-3">Return to {{ $merchant }}</a>
                         @endif
+                        @if ($isPlanOrder ?? false)
+                            <a href="{{ route('subscription.show') }}" class="btn btn-primary mt-3">Go to my plan</a>
+                        @endif
                         <p class="mt-4 text-xs text-slate-400">You can safely close this page.</p>
                         <button id="play-success-sound" type="button" class="mt-3 hidden rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50">Tap to hear payment confirmation</button>
                     </div>
@@ -110,6 +113,9 @@
                             <div class="flex justify-between px-4 py-3"><dt class="text-slate-500">Submitted</dt><dd class="font-medium text-slate-900">{{ $order->utr_submitted_at?->format('d M, h:i A') }}</dd></div>
                         </dl>
                         <p class="mt-6 text-xs text-slate-400">Don't pay again. You can close this page; the merchant will be notified once it's confirmed.</p>
+                        @if ($isPlanOrder ?? false)
+                            <a href="{{ route('subscription.show') }}" class="mt-3 text-sm font-semibold text-brand-600 underline underline-offset-2">Back to my plan</a>
+                        @endif
                         <button id="play-success-sound" type="button" class="mt-3 hidden rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50">Tap to hear payment confirmation</button>
                     </div>
                 @elseif ($order->status === 'expired')

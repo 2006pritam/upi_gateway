@@ -96,6 +96,11 @@ class FamPayEmailVerifier implements Verifier
                 continue;
             }
 
+            // One e-mail pays one order, even when it carries no UTR to compare.
+            if ($parsed['message_id'] !== null && $this->isMessageAlreadyUsed($order, $parsed['message_id'])) {
+                continue;
+            }
+
             // Prefer explicit order-number or customer-submitted UTR match.
             $matchesOrderNo = $order->order_no !== '' && stripos($parsed['text'], $order->order_no) !== false;
             $matchesCustomerUtr = $utr !== null
@@ -354,6 +359,14 @@ class FamPayEmailVerifier implements Verifier
         return Order::where('user_id', $order->user_id)
             ->whereKeyNot($order->id)
             ->where('utr', $utr)
+            ->exists();
+    }
+
+    private function isMessageAlreadyUsed(Order $order, string $messageId): bool
+    {
+        return Order::where('user_id', $order->user_id)
+            ->whereKeyNot($order->id)
+            ->where('provider_txn_id', $messageId)
             ->exists();
     }
 

@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\PlanPayment;
 use App\Models\User;
+use App\Services\OrderService;
+use App\Services\PlanBilling;
 use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class MerchantSubscriptionController extends Controller
 {
-    public function show(Request $request)
+    public function show(Request $request, PlanBilling $billing)
     {
         $user = $request->user();
 
@@ -21,13 +26,46 @@ class MerchantSubscriptionController extends Controller
             $user->forceFill(['subscription_status' => User::SUBSCRIPTION_EXPIRED])->save();
         }
 
+        $due = $user->subscription_status === User::SUBSCRIPTION_PAYMENT_DUE;
+
         return view('subscription.show', [
             'plans' => SubscriptionPlans::PLANS,
+            'receiver' => $billing->receiver(),
+            'openPayment' => $due ? $billing->openPayment($user) : null,
             'contactEmail' => config('billing.admin_contact_email'),
         ]);
     }
 
-    public function requestPlan(Request $request)
+    /** Send the merchant to checkout on the admin's gateway for the approved plan. */
+    public function pay(Request $request, PlanBilling $billing, OrderService $orders)
+    {
+        /** @var User $user */
+        $user = $request->user();
+        abort_if($user->isAdmin(), 404);
+
+        // An earlier checkout that ran out of time gets one last check before a new one is made.
+        $stale = PlanPayment::where('user_id', $user->id)->whereNull('applied_at')
+            ->whereHas('order', fn ($q) => $q->where('status', Order::PENDING)->where('expires_at', '<=', now()))
+            ->with('order.paymentAccount')->latest('id')->first();
+
+        if ($stale) {
+            $orders->check($stale->order, force: true);
+
+            if ($user->refresh()->hasSubscriptionAccess()) {
+                return redirect()->route('subscription.show')->with('status', 'Payment received. Your plan is active.');
+            }
+        }
+
+        try {
+            $order = $billing->checkout($user, $request->ip());
+        } catch (ValidationException $e) {
+            return redirect()->route('subscription.show')->withErrors(['plan' => collect($e->errors())->flatten()->first()]);
+        }
+
+        return redirect()->route('pay.show', $order);
+    }
+
+    public function requestPlan(Request $request, PlanBilling $billing)
     {
         $data = $request->validate([
             'plan' => ['required', 'string', Rule::in(array_keys(SubscriptionPlans::PLANS))],
@@ -61,7 +99,9 @@ class MerchantSubscriptionController extends Controller
 
         $message = $status === User::SUBSCRIPTION_PENDING
             ? 'Your account request has been sent to the admin for review.'
-            : 'Your plan request is saved. Contact the admin to arrange payment; access starts only after the admin confirms payment.';
+            : ($billing->receiver()
+                ? 'Your plan request is saved. Pay below; access starts once the payment is verified.'
+                : 'Your plan request is saved. Contact the admin to arrange payment; access starts only after the admin confirms payment.');
 
         return redirect()->route('subscription.show')->with('status', $message);
     }

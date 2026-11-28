@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Account requests & billing')
-@section('subtitle', 'Review merchant requests, record manual payment, and manage subscription access.')
+@section('subtitle', 'Review merchant requests, plan payments and subscription access.')
 
 @section('content')
 <div class="mb-5 grid gap-3 sm:grid-cols-3">
@@ -14,7 +14,11 @@
 </div>
 
 <div class="mb-5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-950">
-    <strong>Manual collections only.</strong> Contact the merchant and verify the payment outside this app. Use “Confirm payment & start plan” only after money has been received. Access remains blocked until that confirmation.
+    @if ($onlineBilling)
+        <strong>Online plan payments are on.</strong> Approved merchants pay the plan fee to your UPI account, and the plan starts once that order is verified as paid. Use “Confirm payment & start plan” only for money received another way.
+    @else
+        <strong>Online plan payments are off.</strong> Add an active UPI account under “UPI accounts” to let merchants pay here. Until then, use “Confirm payment & start plan” only after money has been received.
+    @endif
 </div>
 
 <details class="card mb-5 p-5" @if ($errors->addAccount->any()) open @endif>
@@ -90,6 +94,22 @@
                         <td class="td min-w-36">
                             <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset {{ $statusTone }}">{{ str($status)->replace('_', ' ')->title() }}</span>
                             @if (! $merchant->is_active)<div class="mt-1 text-xs font-semibold text-red-600">Admin-disabled</div>@endif
+                            @if ($planPayment = $planPayments->get($merchant->id))
+                                @php
+                                    $planOrder = $planPayment->order;
+                                    // Another admin's order opens in the read-only admin view.
+                                    $planOrderUrl = route($planOrder->user_id === auth()->id() ? 'orders.show' : 'admin.order.show', $planOrder);
+                                @endphp
+                                @if ($planPayment->applied_at)
+                                    <a href="{{ $planOrderUrl }}" class="mt-1 block text-xs font-medium text-emerald-700 underline">Paid online ₹{{ number_format((float) $planOrder->payableAmount(), 2) }}</a>
+                                @elseif ($planOrder->status === \App\Models\Order::REVIEW)
+                                    <a href="{{ $planOrderUrl }}" class="mt-1 block text-xs font-semibold text-amber-800 underline">UTR submitted: check and approve</a>
+                                @elseif ($planOrder->status === \App\Models\Order::PAID && $planOrder->paid_at?->gt(now()->subDays(30)))
+                                    <a href="{{ $planOrderUrl }}" class="mt-1 block text-xs font-semibold text-red-700 underline">Paid ₹{{ number_format((float) $planOrder->payableAmount(), 2) }} online, plan not changed</a>
+                                @elseif ($planOrder->status === \App\Models\Order::PENDING)
+                                    <a href="{{ $planOrderUrl }}" class="mt-1 block text-xs text-slate-500 underline">Online payment started</a>
+                                @endif
+                            @endif
                         </td>
                         <td class="td min-w-32 text-sm text-slate-600">
                             <div>{{ \App\Support\SubscriptionPlans::label($planKey) }}</div>

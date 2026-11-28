@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Services\Email\EmailPaymentService;
 use App\Services\OrderService;
+use App\Services\PlanBilling;
 use App\Support\EmbeddedCheckout;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -31,6 +32,7 @@ class CheckoutController extends Controller
         return view('pay', [
             'order' => $order->load('paymentAccount', 'user'),
             'embedOrigin' => $embedOrigin,
+            'isPlanOrder' => app(PlanBilling::class)->isPlanOrder($order),
             // Inside a button popup the redirect waits for a click, so the
             // opening website hears the result first.
             'returnUrl' => $embedOrigin && $order->status === Order::PAID ? $this->redirectUrl($order) : null,

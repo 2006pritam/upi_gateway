@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Order;
 use App\Models\WebhookEndpoint;
+use App\Services\PlanBilling;
 use App\Support\SafeUrl;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -47,6 +48,12 @@ class SendWebhook implements ShouldQueue
 
     public function handle(): void
     {
+        // Plan-fee orders are this platform's own billing: the admin's connected
+        // websites never created them and must not be told about them.
+        if (app(PlanBilling::class)->isPlanOrder($this->order)) {
+            return;
+        }
+
         $merchant = $this->order->user;
         $sandbox = $this->order->environment === Order::SANDBOX;
         $webhookUrl = $sandbox ? $merchant->sandbox_webhook_url : $merchant->webhook_url;

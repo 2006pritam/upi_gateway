@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AdminAuditLog;
 use App\Models\Order;
+use App\Models\PlanPayment;
 use App\Models\User;
+use App\Services\PlanBilling;
 use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,8 +29,17 @@ class AdminController extends Controller
             ->latest()
             ->paginate(25);
 
+        // Each merchant's most recent online plan payment, for the status column.
+        $planPayments = PlanPayment::with('order')
+            ->whereIn('user_id', $merchants->pluck('id'))
+            ->orderBy('id')
+            ->get()
+            ->keyBy('user_id');
+
         return view('admin.merchants', [
             'merchants' => $merchants,
+            'planPayments' => $planPayments,
+            'onlineBilling' => app(PlanBilling::class)->receiver() !== null,
             'plans' => SubscriptionPlans::PLANS,
         ]);
     }
@@ -121,7 +132,7 @@ class AdminController extends Controller
         return back()->with('status', "{$user->displayName()}'s account request was rejected.");
     }
 
-    public function activateSubscription(Request $request, User $user)
+    public function activateSubscription(Request $request, User $user, PlanBilling $billing)
     {
         abort_if($user->isAdmin(), 403);
 
@@ -129,7 +140,7 @@ class AdminController extends Controller
             'payment_reference' => ['nullable', 'string', 'max:120'],
         ]);
 
-        DB::transaction(function () use ($request, $user, $data) {
+        DB::transaction(function () use ($request, $user, $data, $billing) {
             $merchant = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             abort_unless(
                 $merchant->subscription_status === User::SUBSCRIPTION_PAYMENT_DUE
@@ -140,17 +151,7 @@ class AdminController extends Controller
 
             $plan = $merchant->subscription_requested_plan;
             $startedAt = now();
-            $merchant->forceFill([
-                'subscription_status' => User::SUBSCRIPTION_ACTIVE,
-                'subscription_plan' => $plan,
-                'subscription_paid_at' => $startedAt,
-                'subscription_started_at' => $startedAt,
-                'subscription_expires_at' => SubscriptionPlans::expiry($plan, $startedAt),
-            ])->save();
-
-            if (! $merchant->api_key) {
-                $merchant->regenerateApiCredentials();
-            }
+            $billing->activate($merchant, $plan, $startedAt);
 
             $this->audit($request, $merchant, 'subscription_payment_confirmed', [
                 'email' => $merchant->email,

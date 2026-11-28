@@ -205,6 +205,8 @@ class OrderService
                     'review_note' => null,
                 ])->save();
 
+                app(PlanBilling::class)->applyPaidOrder($locked);
+
                 return true;
             });
         } catch (UniqueConstraintViolationException) {
@@ -319,6 +321,7 @@ class OrderService
                 'review_note' => null,
             ])->save();
 
+            app(PlanBilling::class)->applyPaidOrder($locked);
             $this->dispatchEvent($locked, 'order.paid');
         });
 

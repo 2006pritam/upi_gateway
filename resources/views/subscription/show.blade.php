@@ -3,6 +3,12 @@
 @section('title', 'Subscription & account access · '.config('app.name'))
 
 @section('body')
+@php
+    $user = auth()->user();
+    $due = $user->subscription_status === \App\Models\User::SUBSCRIPTION_PAYMENT_DUE;
+    $dueAmount = \App\Support\SubscriptionPlans::amount((string) $user->subscription_requested_plan);
+    $canPayOnline = $receiver !== null;
+@endphp
 <div class="min-h-full bg-slate-50 px-4 py-10 sm:px-6">
     <div class="mx-auto max-w-2xl">
         <div class="mb-8 flex items-center justify-between gap-4">
@@ -30,10 +36,14 @@
                             Your account is waiting for admin approval. Payment and subscription time do not start until the admin has approved the account and confirmed payment.
                             @break
                         @case(\App\Models\User::SUBSCRIPTION_PAYMENT_DUE)
-                            Your account or renewal request has been approved. Arrange payment with the admin; access and the subscription term start only after payment is received and confirmed in the admin dashboard.
+                            @if ($canPayOnline)
+                                Your account or renewal request has been approved. Pay the plan fee below; access and the subscription term start once the payment is verified.
+                            @else
+                                Your account or renewal request has been approved. Arrange payment with the admin; access and the subscription term start only after payment is received and confirmed in the admin dashboard.
+                            @endif
                             @break
                         @case(\App\Models\User::SUBSCRIPTION_EXPIRED)
-                            Your paid term has ended. Dashboard, merchant actions, and API access are paused until you request a plan, pay the admin, and the admin confirms payment.
+                            Your paid term has ended. Dashboard, merchant actions, and API access are paused until you request a plan and its payment is confirmed.
                             @break
                         @case(\App\Models\User::SUBSCRIPTION_REJECTED)
                             The admin did not approve this account request. Contact the admin or submit a new request for review.
@@ -84,7 +94,15 @@
                         <h2 class="font-semibold text-slate-900">
                             {{ auth()->user()->subscription_status === \App\Models\User::SUBSCRIPTION_REJECTED ? 'Request account review again' : 'Choose a renewal plan' }}
                         </h2>
-                        <p class="mt-1 text-sm text-slate-600">Payment is arranged directly with the admin. This website does not collect subscription payments automatically.</p>
+                        <p class="mt-1 text-sm text-slate-600">
+                            @if ($canPayOnline && $user->subscription_status !== \App\Models\User::SUBSCRIPTION_REJECTED)
+                                Choose a plan, then pay for it online on the next screen.
+                            @elseif ($canPayOnline)
+                                After the admin approves your request, you can pay online here.
+                            @else
+                                Payment is arranged directly with the admin.
+                            @endif
+                        </p>
                         <form method="POST" action="{{ route('subscription.request') }}" class="mt-4 flex flex-col gap-3 sm:flex-row">
                             @csrf
                             <label class="sr-only" for="plan">Subscription plan</label>
@@ -102,10 +120,39 @@
                     </div>
                 @endif
 
+                @if ($due && $canPayOnline && $dueAmount)
+                    <div class="mt-8 rounded-xl border-2 border-brand-600 p-5">
+                        <div class="flex flex-wrap items-end justify-between gap-3">
+                            <div>
+                                <h2 class="font-semibold text-slate-900">Pay online by UPI</h2>
+                                <p class="mt-1 text-sm text-slate-600">{{ \App\Support\SubscriptionPlans::label($user->subscription_requested_plan) }} plan · paid to {{ $receiver->displayName() }}</p>
+                            </div>
+                            <div class="text-2xl font-bold tabular-nums text-slate-900">₹{{ number_format($dueAmount) }}</div>
+                        </div>
+                        @if ($openPayment?->order->status === \App\Models\Order::REVIEW)
+                            <p class="mt-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-900">Your payment is being verified. Don't pay again.</p>
+                            <a href="{{ route('pay.show', $openPayment->order) }}" class="btn btn-secondary mt-3 w-full justify-center">View payment status</a>
+                        @else
+                            <form method="POST" action="{{ route('subscription.pay') }}" class="mt-4">
+                                @csrf
+                                <button class="btn btn-primary btn-lg w-full justify-center">
+                                    <x-icon name="lock" class="h-5 w-5" /> {{ $openPayment ? 'Continue payment' : 'Pay ₹'.number_format($dueAmount).' now' }}
+                                </button>
+                            </form>
+                            <p class="mt-3 text-xs text-slate-500">Your plan starts automatically once the payment is verified. Pay the exact amount shown on the payment screen.</p>
+                        @endif
+                    </div>
+                @endif
+
                 @if (! (auth()->user()->subscription_plan === \App\Support\SubscriptionPlans::LIFETIME && auth()->user()->hasSubscriptionAccess()))
                 <div class="mt-6 rounded-xl bg-indigo-50 p-5 text-sm text-indigo-950">
-                    <h2 class="font-semibold">Manual payment with the admin</h2>
-                    <p class="mt-1 leading-6">Choose a plan above when available, then contact the admin to arrange payment. Once payment has been received, the admin records it and your plan starts. If your subscription expires before renewal is confirmed, app and API access remain blocked.</p>
+                    @if ($canPayOnline)
+                        <h2 class="font-semibold">Need help with a payment?</h2>
+                        <p class="mt-1 leading-6">If money was debited but your plan has not started, don't pay again: send the admin your UTR number. You can also ask the admin about another way to pay or a different plan.</p>
+                    @else
+                        <h2 class="font-semibold">Manual payment with the admin</h2>
+                        <p class="mt-1 leading-6">Choose a plan above when available, then contact the admin to arrange payment. Once payment has been received, the admin records it and your plan starts. If your subscription expires before renewal is confirmed, app and API access remain blocked.</p>
+                    @endif
                     <a class="mt-3 inline-flex font-semibold text-indigo-700 underline underline-offset-2" href="mailto:{{ $contactEmail }}?subject={{ rawurlencode(config('app.name').' account or subscription') }}">Contact {{ $contactEmail }}</a>
                 </div>
                 @endif
@@ -115,7 +162,7 @@
                 @endif
             </div>
         </div>
-        <p class="mt-5 text-center text-xs text-slate-400">No payment details are collected on this page. Share payment references only with the administrator.</p>
+        <p class="mt-5 text-center text-xs text-slate-400">Share payment references only with the administrator. Never share your UPI PIN or OTP.</p>
     </div>
 </div>
 @endsection
