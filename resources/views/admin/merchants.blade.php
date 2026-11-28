@@ -17,6 +17,35 @@
     <strong>Manual collections only.</strong> Contact the merchant and verify the payment outside this app. Use “Confirm payment & start plan” only after money has been received. Access remains blocked until that confirmation.
 </div>
 
+<details class="card mb-5 p-5" @if ($errors->addAccount->any()) open @endif>
+    <summary class="cursor-pointer font-semibold text-slate-900">Add account <span class="font-normal text-slate-500">· lifetime access, no subscription needed</span></summary>
+    <form method="POST" action="{{ route('admin.merchants.store') }}" class="mt-4">
+        @csrf
+        @if ($errors->addAccount->any())
+            <div class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+                @foreach ($errors->addAccount->all() as $message)<div>{{ $message }}</div>@endforeach
+            </div>
+        @endif
+        <div class="grid gap-3 sm:grid-cols-2">
+            @foreach ([
+                ['name', 'Owner name', 'text', true, 'off'],
+                ['business_name', 'Business name', 'text', true, 'off'],
+                ['email', 'Email', 'email', true, 'off'],
+                ['phone', 'Mobile number (optional)', 'text', false, 'off'],
+                ['password', 'Password (min 10 characters)', 'password', true, 'new-password'],
+                ['password_confirmation', 'Confirm password', 'password', true, 'new-password'],
+            ] as [$field, $label, $type, $required, $autocomplete])
+                <div>
+                    <label for="add-{{ $field }}" class="label">{{ $label }}</label>
+                    <input id="add-{{ $field }}" name="{{ $field }}" type="{{ $type }}" class="input py-2.5" autocomplete="{{ $autocomplete }}"
+                        value="{{ $type === 'password' || ! $errors->addAccount->any() ? '' : old($field) }}" @required($required)>
+                </div>
+            @endforeach
+        </div>
+        <button class="btn btn-primary mt-4">Create lifetime account</button>
+    </form>
+</details>
+
 <div class="card overflow-hidden">
     @if ($merchants->isEmpty())
         <x-empty icon="users" title="No merchants yet" text="Account requests appear here after signup." />
@@ -66,6 +95,7 @@
                             <div>{{ \App\Support\SubscriptionPlans::label($planKey) }}</div>
                             @if ($planKey && \App\Support\SubscriptionPlans::amount($planKey))<div class="text-xs text-slate-500">₹{{ number_format(\App\Support\SubscriptionPlans::amount($planKey)) }}</div>@endif
                             @if ($merchant->subscription_expires_at)<div class="mt-1 text-xs">Ends {{ $merchant->subscription_expires_at->format('d M Y') }}</div>@endif
+                            @if ($planKey === \App\Support\SubscriptionPlans::LIFETIME)<div class="mt-1 text-xs">Never expires</div>@endif
                         </td>
                         <td class="td whitespace-nowrap text-slate-500">{{ $merchant->created_at->format('d M Y') }}</td>
                         <td class="td min-w-64 space-y-2">

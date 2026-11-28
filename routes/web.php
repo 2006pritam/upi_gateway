@@ -146,6 +146,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Admin routes — require password re-confirmation within the last 15 minutes.
         Route::prefix('admin')->name('admin.')->middleware(['admin', 'password.confirm:,900'])->group(function () {
             Route::get('/merchants', [AdminController::class, 'merchants'])->name('merchants');
+            Route::post('/merchants', [AdminController::class, 'storeMerchant'])->middleware('throttle:20,1')->name('merchants.store');
             Route::post('/merchants/{user}/toggle', [AdminController::class, 'toggleMerchant'])->name('merchants.toggle');
             Route::post('/merchants/{user}/approve', [AdminController::class, 'approveMerchant'])->name('merchants.approve');
             Route::post('/merchants/{user}/reject', [AdminController::class, 'rejectMerchant'])->name('merchants.reject');

@@ -13,6 +13,9 @@ class SubscriptionPlans
         'annual' => ['label' => '12 months', 'amount' => 2100, 'months' => 12],
     ];
 
+    /** Granted only when the admin creates an account; deliberately not in PLANS, so signup can't pick it. */
+    public const LIFETIME = 'lifetime';
+
     public static function valid(string $key): bool
     {
         return array_key_exists($key, self::PLANS);
@@ -20,6 +23,10 @@ class SubscriptionPlans
 
     public static function label(?string $key): string
     {
+        if ($key === self::LIFETIME) {
+            return 'Lifetime';
+        }
+
         return self::PLANS[$key]['label'] ?? 'Not selected';
     }
 

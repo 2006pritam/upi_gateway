@@ -10,6 +10,7 @@ use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class AdminController extends Controller
 {
@@ -42,6 +43,42 @@ class AdminController extends Controller
         ]);
 
         return back()->with('status', "{$user->displayName()} ".($user->is_active ? 'enabled.' : 'disabled.'));
+    }
+
+    /** An account the admin creates directly: active for life, with no plan, payment or approval step. */
+    public function storeMerchant(Request $request)
+    {
+        $password = Password::min(10);
+        if (app()->isProduction()) {
+            $password = $password->uncompromised();
+        }
+
+        $data = $request->validateWithBag('addAccount', [
+            'name' => ['required', 'string', 'max:100'],
+            'business_name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:255', 'unique:users'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'password' => ['required', 'confirmed', $password],
+        ]);
+
+        $merchant = DB::transaction(function () use ($request, $data) {
+            $merchant = User::create($data + [
+                'role' => 'merchant',
+                'is_active' => true,
+                'subscription_status' => User::SUBSCRIPTION_ACTIVE,
+                'subscription_plan' => SubscriptionPlans::LIFETIME,
+                'subscription_approved_at' => now(),
+                'subscription_started_at' => now(),
+                'subscription_expires_at' => null,
+            ]);
+            $merchant->regenerateApiCredentials();
+            $this->audit($request, $merchant, 'merchant_created_lifetime', ['email' => $merchant->email]);
+
+            return $merchant;
+        });
+
+        return redirect()->route('admin.merchants')
+            ->with('status', "{$merchant->displayName()}'s account is ready with lifetime access. Share the email and password with them.");
     }
 
     public function approveMerchant(Request $request, User $user)

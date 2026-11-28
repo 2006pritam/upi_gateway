@@ -74,7 +74,7 @@
                         </div>
                         <div class="rounded-xl bg-slate-50 p-4">
                             <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Ends</div>
-                            <div class="mt-1 font-semibold text-slate-900">{{ auth()->user()->subscription_expires_at?->format('d M Y') ?? 'No expiry recorded' }}</div>
+                            <div class="mt-1 font-semibold text-slate-900">{{ auth()->user()->subscription_expires_at?->format('d M Y') ?? (auth()->user()->subscription_plan === \App\Support\SubscriptionPlans::LIFETIME ? 'Never' : 'No expiry recorded') }}</div>
                         </div>
                     @endif
                 </div>
@@ -102,11 +102,13 @@
                     </div>
                 @endif
 
+                @if (! (auth()->user()->subscription_plan === \App\Support\SubscriptionPlans::LIFETIME && auth()->user()->hasSubscriptionAccess()))
                 <div class="mt-6 rounded-xl bg-indigo-50 p-5 text-sm text-indigo-950">
                     <h2 class="font-semibold">Manual payment with the admin</h2>
                     <p class="mt-1 leading-6">Choose a plan above when available, then contact the admin to arrange payment. Once payment has been received, the admin records it and your plan starts. If your subscription expires before renewal is confirmed, app and API access remain blocked.</p>
                     <a class="mt-3 inline-flex font-semibold text-indigo-700 underline underline-offset-2" href="mailto:{{ $contactEmail }}?subject={{ rawurlencode(config('app.name').' account or subscription') }}">Contact {{ $contactEmail }}</a>
                 </div>
+                @endif
 
                 @if (auth()->user()->hasSubscriptionAccess())
                     <a href="{{ route('dashboard') }}" class="btn btn-primary mt-6 w-full justify-center">Return to dashboard</a>
